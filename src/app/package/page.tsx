@@ -1,0 +1,54 @@
+import { DownloadRow, MvpShell, PrimaryButton, SecondaryButton, SectionCard } from "@/components/ui";
+import { mediaLab } from "@/lib/media-lab-service";
+
+export default async function PackagePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ outputs?: string }>;
+}) {
+  const { outputs = "" } = await searchParams;
+  const allOutputs = mediaLab.getOutputFormats();
+  const selectedIds = outputs ? outputs.split(",") : allOutputs.map((output) => output.id);
+  const selectedOutputs = allOutputs.filter((output) => selectedIds.includes(output.id));
+  const stills = selectedOutputs.filter((output) => output.type === "still");
+  const videos = selectedOutputs.filter((output) => output.type === "video");
+
+  return (
+    <MvpShell>
+      <section className="mx-auto mb-8 max-w-3xl text-center">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-700">Mock Generation Complete</p>
+        <h1 className="text-4xl font-semibold tracking-tight text-[#06153a]">Your package is ready.</h1>
+        <p className="mt-4 text-lg leading-8 text-slate-600">
+          Download the selected stills and videos, or start a new package.
+        </p>
+      </section>
+
+      <div className="mx-auto grid max-w-4xl gap-5">
+        <SectionCard title="Stills">
+          <div className="space-y-3">
+            {stills.length > 0 ? (
+              stills.map((output) => <DownloadRow key={output.id} output={output} />)
+            ) : (
+              <p className="text-sm text-slate-500">No still outputs selected.</p>
+            )}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Videos">
+          <div className="space-y-3">
+            {videos.length > 0 ? (
+              videos.map((output) => <DownloadRow key={output.id} output={output} />)
+            ) : (
+              <p className="text-sm text-slate-500">No video outputs selected.</p>
+            )}
+          </div>
+        </SectionCard>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <PrimaryButton href="/package">Download All</PrimaryButton>
+          <SecondaryButton href="/">Create Another Package</SecondaryButton>
+        </div>
+      </div>
+    </MvpShell>
+  );
+}
