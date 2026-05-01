@@ -1,5 +1,5 @@
 import { PackageGenerator } from "@/components/package-generator";
-import { MvpShell, SecondaryButton } from "@/components/ui";
+import { MvpShell } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
 
 export default function GeneratePage() {
@@ -8,7 +8,7 @@ export default function GeneratePage() {
 
   return (
     <MvpShell>
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="mb-8">
         <div>
           <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-blue-700">Quote Card</p>
           <h1 className="text-3xl font-semibold tracking-tight text-[#06153a] md:text-4xl">
@@ -18,7 +18,6 @@ export default function GeneratePage() {
             MEDIA LAB will mock-generate stills and videos in the exact sizes selected below.
           </p>
         </div>
-        <SecondaryButton href="/">Change Template</SecondaryButton>
       </div>
 
       <PackageGenerator

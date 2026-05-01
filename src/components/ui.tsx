@@ -68,11 +68,27 @@ export function PrimaryButton({
   href,
   children,
   className = "",
+  disabled = false,
 }: {
   href: string;
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }) {
+  if (disabled) {
+    return (
+      <span
+        aria-disabled="true"
+        className={`${buttonBase} cursor-not-allowed gap-2 bg-slate-300 !text-white ${className}`}
+      >
+        <span className="text-white">{children}</span>
+        <span className="text-white" aria-hidden="true">
+          -&gt;
+        </span>
+      </span>
+    );
+  }
+
   return (
     <Link
       href={href}
@@ -131,12 +147,14 @@ export function ButtonLike({
   className = "",
   type = "button",
   onClick,
+  disabled = false,
 }: {
   children: React.ReactNode;
   variant?: "primary" | "secondary" | "ghost";
   className?: string;
   type?: "button" | "submit";
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   const variantClass =
     variant === "primary"
@@ -149,7 +167,8 @@ export function ButtonLike({
     <button
       type={type}
       onClick={onClick}
-      className={`${buttonBase} ${variantClass} ${className}`}
+      disabled={disabled}
+      className={`${buttonBase} ${variantClass} ${disabled ? "cursor-not-allowed opacity-60" : ""} ${className}`}
       style={variant === "primary" ? { color: "#ffffff" } : undefined}
     >
       {children}
