@@ -1,14 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PreviewGrid } from "@/components/preview-grid";
 import {
   ButtonLike,
   OutputGroup,
-  PrimaryButton,
   SecondaryButton,
   SectionCard,
 } from "@/components/ui";
+import { mediaLabPayloadToModeckRenderRequest } from "@/lib/modeck/modeck-mapping";
+import { mockModeckAdapter } from "@/lib/modeck/mock-modeck-adapter";
 import type { MvpOutputFormat } from "@/lib/output-formats";
 import { getUniquePreviewRatios, type PreviewContent } from "@/lib/preview-state";
 import type { PackageField, Template } from "@/lib/types";
@@ -30,6 +32,7 @@ export function PackageGenerator({
   fields: PackageField[];
   outputs: MvpOutputFormat[];
 }) {
+  const router = useRouter();
   const stills = outputs.filter((output) => output.type === "still");
   const videos = outputs.filter((output) => output.type === "video");
   const [selectedIds, setSelectedIds] = useState<string[]>([
@@ -44,13 +47,12 @@ export function PackageGenerator({
     contextLine: getFieldValue(fields, "Context Line"),
     headshot: getFieldValue(fields, "Headshot"),
   }));
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const selectedRatios = useMemo(
     () => getUniquePreviewRatios(outputs, selectedIds),
     [outputs, selectedIds],
   );
-
-  const packageHref = useMemo(() => `/package?outputs=${selectedIds.join(",")}`, [selectedIds]);
 
   function toggleOutput(id: string) {
     setSelectedIds((current) =>
@@ -64,6 +66,45 @@ export function PackageGenerator({
 
   function updateContent(key: keyof PreviewContent, value: string) {
     setContent((current) => ({ ...current, [key]: value }));
+  }
+
+  async function generatePackage() {
+    if (selectedIds.length === 0 || isGenerating) {
+      return;
+    }
+
+    setIsGenerating(true);
+
+    const renderRequests = mediaLabPayloadToModeckRenderRequest({
+      templateId: template.id,
+      packageName: `${content.speakerName || "Quote Card"} Package`,
+      fields: {
+        quote: content.quote,
+        speakerName: content.speakerName,
+        speakerTitle: content.speakerTitle,
+        contextLine: content.contextLine,
+        headshot: content.headshot,
+      },
+      selectedOutputIds: selectedIds,
+      mediaReferences: {
+        headshot: content.headshot,
+      },
+    });
+
+    const renderResults = await Promise.all(
+      renderRequests.map((request) => mockModeckAdapter.requestRender(request)),
+    );
+    const renderedOutputs = renderResults.map((result) => ({
+      outputId: result.outputId,
+      editId: result.editId,
+      temporaryDownloadUrl: result.files[0]?.temporaryDownloadUrl ?? "",
+    }));
+    const params = new URLSearchParams({
+      outputs: selectedIds.join(","),
+      renders: encodeURIComponent(JSON.stringify(renderedOutputs)),
+    });
+
+    router.push(`/package?${params.toString()}`);
   }
 
   return (
@@ -107,9 +148,13 @@ export function PackageGenerator({
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
         <SecondaryButton href="/">Change Template</SecondaryButton>
-        <PrimaryButton href={packageHref} disabled={selectedIds.length === 0}>
-          Generate Package
-        </PrimaryButton>
+        <ButtonLike
+          variant="primary"
+          onClick={generatePackage}
+          disabled={selectedIds.length === 0 || isGenerating}
+        >
+          {isGenerating ? "Generating package..." : "Generate Package"}
+        </ButtonLike>
       </div>
     </div>
   );

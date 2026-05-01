@@ -80,10 +80,13 @@ export class MockModeckAdapter implements ModeckAdapter {
   }
 
   async requestRender(payload: ModeckRenderRequest): Promise<ModeckRenderResponse> {
+    const editId = payload.editId ?? createMockEditId(payload.packageName, payload.output.id);
+
     return {
-      editId: payload.editId ?? createMockEditId(payload.packageName, payload.output.id),
+      editId,
       status: "completed",
       outputId: payload.output.id,
+      files: [createMockRenderFile(editId, payload.output)],
     };
   }
 
@@ -92,15 +95,7 @@ export class MockModeckAdapter implements ModeckAdapter {
       editId,
       status: "completed",
       progress: 100,
-      files: MVP_OUTPUT_FORMATS.slice(0, 1).map((output) => ({
-        outputId: output.id,
-        filename: `quote-card-${output.id}.${output.type === "video" ? "mp4" : "png"}`,
-        contentType: output.type === "video" ? "video/mp4" : "image/png",
-        temporaryDownloadUrl: `https://mock.modeck.local/renders/${editId}/${output.id}`,
-        width: output.width,
-        height: output.height,
-        ratio: output.aspectLabel,
-      })),
+      files: [createMockRenderFile(editId, inferOutputFromEditId(editId))],
     };
   }
 
@@ -133,6 +128,25 @@ export const mockModeckAdapter = new MockModeckAdapter();
 
 function createMockEditId(packageName: string, suffix: string) {
   return `mock-edit-${slugify(packageName)}-${slugify(suffix)}`;
+}
+
+function createMockRenderFile(editId: string, output: (typeof MVP_OUTPUT_FORMATS)[number]) {
+  return {
+    outputId: output.id,
+    filename: `quote-card-${output.id}.${output.type === "video" ? "mp4" : "png"}`,
+    contentType: output.type === "video" ? "video/mp4" : "image/png",
+    temporaryDownloadUrl: `https://mock.modeck.local/renders/${editId}/${output.id}`,
+    width: output.width,
+    height: output.height,
+    ratio: output.aspectLabel,
+  };
+}
+
+function inferOutputFromEditId(editId: string) {
+  return (
+    MVP_OUTPUT_FORMATS.find((output) => editId.endsWith(slugify(output.id))) ??
+    MVP_OUTPUT_FORMATS[0]
+  );
 }
 
 function slugify(value: string) {

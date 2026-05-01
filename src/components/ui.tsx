@@ -500,7 +500,15 @@ export function OutputGroup({
   );
 }
 
-export function DownloadRow({ output }: { output: MvpOutputFormat }) {
+export function DownloadRow({
+  output,
+  editId,
+  downloadUrl = "/package",
+}: {
+  output: MvpOutputFormat;
+  editId?: string;
+  downloadUrl?: string;
+}) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
       <div>
@@ -510,8 +518,9 @@ export function DownloadRow({ output }: { output: MvpOutputFormat }) {
         <p className="text-sm text-slate-500">
           {output.aspectLabel} · Mock {output.type === "still" ? "PNG" : "MP4"}
         </p>
+        {editId ? <p className="mt-1 text-xs text-slate-400">Mock edit ID: {editId}</p> : null}
       </div>
-      <SecondaryButton href="/package" className="shrink-0">
+      <SecondaryButton href={downloadUrl} className="shrink-0">
         Download
       </SecondaryButton>
     </div>

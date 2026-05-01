@@ -83,6 +83,7 @@ export interface ModeckRenderResponse {
   editId: string;
   status: ModeckRenderStatus;
   outputId: string;
+  files: ModeckRenderFile[];
 }
 
 export interface ModeckRenderFile {

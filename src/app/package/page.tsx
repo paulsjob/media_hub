@@ -4,14 +4,15 @@ import { mediaLab } from "@/lib/media-lab-service";
 export default async function PackagePage({
   searchParams,
 }: {
-  searchParams: Promise<{ outputs?: string }>;
+  searchParams: Promise<{ outputs?: string; renders?: string }>;
 }) {
-  const { outputs = "" } = await searchParams;
+  const { outputs = "", renders = "" } = await searchParams;
   const allOutputs = mediaLab.getOutputFormats();
   const selectedIds = outputs ? outputs.split(",") : allOutputs.map((output) => output.id);
   const selectedOutputs = allOutputs.filter((output) => selectedIds.includes(output.id));
   const stills = selectedOutputs.filter((output) => output.type === "still");
   const videos = selectedOutputs.filter((output) => output.type === "video");
+  const renderResults = parseRenderResults(renders);
 
   return (
     <MvpShell>
@@ -27,7 +28,14 @@ export default async function PackagePage({
         <SectionCard title="Stills">
           <div className="space-y-3">
             {stills.length > 0 ? (
-              stills.map((output) => <DownloadRow key={output.id} output={output} />)
+              stills.map((output) => (
+                <DownloadRow
+                  key={output.id}
+                  output={output}
+                  editId={renderResults[output.id]?.editId}
+                  downloadUrl={renderResults[output.id]?.temporaryDownloadUrl}
+                />
+              ))
             ) : (
               <p className="text-sm text-slate-500">No still outputs selected.</p>
             )}
@@ -37,7 +45,14 @@ export default async function PackagePage({
         <SectionCard title="Videos">
           <div className="space-y-3">
             {videos.length > 0 ? (
-              videos.map((output) => <DownloadRow key={output.id} output={output} />)
+              videos.map((output) => (
+                <DownloadRow
+                  key={output.id}
+                  output={output}
+                  editId={renderResults[output.id]?.editId}
+                  downloadUrl={renderResults[output.id]?.temporaryDownloadUrl}
+                />
+              ))
             ) : (
               <p className="text-sm text-slate-500">No video outputs selected.</p>
             )}
@@ -51,4 +66,28 @@ export default async function PackagePage({
       </div>
     </MvpShell>
   );
+}
+
+interface PackageRenderResult {
+  outputId: string;
+  editId: string;
+  temporaryDownloadUrl: string;
+}
+
+function parseRenderResults(value: string): Record<string, PackageRenderResult> {
+  if (!value) {
+    return {};
+  }
+
+  try {
+    const decoded = decodeURIComponent(value);
+    const parsed = JSON.parse(decoded) as PackageRenderResult[];
+
+    return parsed.reduce<Record<string, PackageRenderResult>>((results, result) => {
+      results[result.outputId] = result;
+      return results;
+    }, {});
+  } catch {
+    return {};
+  }
 }
