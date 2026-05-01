@@ -32,6 +32,18 @@ npm.cmd run build
 
 The app avoids `next/font/google` so production builds do not require Google Fonts network access.
 
+## Future MoDeck Environment Variables
+
+These variables are documented for the future live MoDeck integration only. They are not required for the mock MVP, and real MoDeck calls are not active yet.
+
+```bash
+MODECK_API_KEY=
+MODECK_API_BASE_URL=https://api.modeck.io
+MODECK_DEFAULT_DECK=
+```
+
+`MODECK_API_KEY` must only be read from server-side code. API keys must never be exposed to frontend code or bundled into browser JavaScript.
+
 ## Routes
 
 - `/` - Dashboard command center
