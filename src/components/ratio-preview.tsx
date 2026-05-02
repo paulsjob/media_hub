@@ -5,6 +5,8 @@ import {
   getLineClampStyle,
   getQuoteCardLayout,
   quoteCardTemplateFamily,
+  type QuoteCardBoxSpec,
+  type QuoteCardTextSpec,
 } from "@/lib/quote-card-layouts";
 import type { PreviewContent, PreviewRatio } from "@/lib/preview-state";
 
@@ -16,101 +18,128 @@ export function RatioPreview({
   content: PreviewContent;
 }) {
   const layout = getQuoteCardLayout(ratio.aspectLabel);
+  const spec = layout.spec;
   const constraints = quoteCardTemplateFamily.constraints;
   const quote = clampText(content.quote || "Add the quote", constraints.quoteMaxCharacters);
   const speakerName = clampText(content.speakerName || "Speaker Name", constraints.speakerNameMaxCharacters);
   const speakerTitle = clampText(content.speakerTitle || "Speaker Title", constraints.speakerTitleMaxCharacters);
   const contextLine = clampText(content.contextLine || "Context line", constraints.contextLineMaxCharacters);
-  const quoteFontSize = getFluidFontSize(
-    layout.quoteMinFontPx,
-    layout.quotePreferredCqw,
-    fitQuoteFontSize(quote, layout),
-  );
 
   return (
     <div
       data-preview-ratio={ratio.aspectLabel}
       data-preview-width={ratio.width}
       data-preview-height={ratio.height}
-      className="[container-type:inline-size] h-full w-full overflow-hidden rounded-lg border border-slate-300 bg-[#dceeff] text-[#06153a] shadow-sm"
+      className="[container-type:inline-size] relative h-full w-full overflow-hidden bg-[#dceeff] text-[#06153a] shadow-sm"
+      style={{
+        borderColor: "#cbd5e1",
+        borderRadius: spec.cornerRadiusPx,
+        borderStyle: "solid",
+        borderWidth: spec.borderThicknessPx,
+      }}
     >
-      <div className={`grid h-full min-h-0 w-full overflow-hidden ${layout.canvasGridClass} ${layout.canvasPaddingClass}`}>
-        <section className={`min-h-0 w-full min-w-0 max-w-full overflow-hidden ${layout.quoteAreaClass}`}>
-          <div
-            className={`inline-flex w-fit shrink-0 rounded bg-orange-600 px-[clamp(8px,2.4cqw,12px)] py-[clamp(3px,0.9cqw,5px)] font-semibold uppercase tracking-wide text-white ${layout.eyebrowFontClass} ${layout.eyebrowClass}`}
-          >
-            Official Statement
-          </div>
-          <blockquote
-            className={`m-0 min-h-0 min-w-0 font-semibold tracking-tight ${layout.quoteMaxWidthClass}`}
-            style={{
-              ...getLineClampStyle(layout.quoteMaxLines),
-              fontSize: quoteFontSize,
-              lineHeight: layout.quoteLineHeight,
-            }}
-          >
-            &quot;{quote}&quot;
-          </blockquote>
-        </section>
+      <TextBox spec={spec.label} className="bg-orange-600 px-[1.8%] py-[0.7%] font-bold uppercase text-white">
+        Official Statement
+      </TextBox>
 
-        <section className={`min-h-0 w-full min-w-0 max-w-full shrink-0 ${layout.speakerBlockClass}`}>
-          <div className={`h-1 w-full bg-orange-500 ${layout.dividerClass}`} />
-          <div className={`w-full min-w-0 max-w-full overflow-hidden ${layout.speakerRowClass}`}>
-            <div className="flex w-full min-w-0 max-w-full items-center gap-3 overflow-hidden">
-              <div
-                className={`grid shrink-0 place-items-center rounded-full border-2 border-[#06153a] bg-blue-50 text-sm font-semibold ${layout.headshotClass}`}
-              >
-                {content.headshot ? content.headshot.slice(0, 2).toUpperCase() : "HS"}
-              </div>
-              <div className={`max-w-full overflow-hidden ${layout.speakerTextClass}`}>
-                <p
-                  className="m-0 truncate font-semibold uppercase tracking-wide"
-                  style={{
-                    fontSize: getFluidFontSize(
-                      Math.max(11, layout.speakerNameFontPx - 3),
-                      layout.speakerNamePreferredCqw,
-                      layout.speakerNameFontPx,
-                    ),
-                  }}
-                >
-                  {speakerName}
-                </p>
-                <p
-                  className="m-0 truncate text-[#06153a]/80"
-                  style={{
-                    fontSize: getFluidFontSize(
-                      Math.max(9, layout.speakerTitleFontPx - 2),
-                      layout.speakerTitlePreferredCqw,
-                      layout.speakerTitleFontPx,
-                    ),
-                  }}
-                >
-                  {speakerTitle}
-                </p>
-              </div>
-            </div>
-            <p
-              className={`m-0 min-w-0 max-w-full font-semibold uppercase leading-tight ${layout.contextClass}`}
-              style={{
-                ...getLineClampStyle(layout.contextMaxLines),
-                fontSize: getFluidFontSize(
-                  Math.max(9, layout.contextFontPx - 2),
-                  layout.contextPreferredCqw,
-                  layout.contextFontPx,
-                ),
-              }}
-            >
-              {contextLine}
-            </p>
-          </div>
-          <div
-            className={`bg-[#06153a] font-semibold uppercase text-white ${layout.brandFontClass} ${layout.brandBarClass} ${layout.metadataClass}`}
-          >
-            <span className="truncate">Civic Action Institution</span>
-            <span className="shrink-0">2026</span>
-          </div>
-        </section>
-      </div>
+      <TextBox
+        as="blockquote"
+        spec={spec.quote}
+        className="m-0 font-bold uppercase tracking-[0.02em]"
+        fontMaxPx={fitQuoteFontSize(quote, layout)}
+      >
+        &quot;{quote}&quot;
+      </TextBox>
+
+      <Box spec={spec.orangeRule} className="bg-orange-500" />
+
+      <Box
+        spec={spec.headshot}
+        className="grid place-items-center rounded-full border-[clamp(2px,0.45cqw,6px)] border-[#06153a] bg-blue-50 font-bold"
+      >
+        <span style={{ fontSize: "clamp(13px, 3.1cqw, 34px)", lineHeight: 1 }}>
+          {content.headshot ? content.headshot.slice(0, 2).toUpperCase() : "HS"}
+        </span>
+      </Box>
+
+      <TextBox spec={spec.speakerName} className="font-bold uppercase tracking-[0.04em]">
+        {speakerName}
+      </TextBox>
+
+      <TextBox spec={spec.speakerTitle} className="font-bold uppercase tracking-[0.03em] text-[#06153a]/85">
+        {speakerTitle}
+      </TextBox>
+
+      <TextBox spec={spec.context} className="font-bold uppercase tracking-[0.03em]">
+        {contextLine}
+      </TextBox>
+
+      <Box spec={spec.footer} className="bg-[#06153a]" />
+      <TextBox spec={spec.footerText} className="font-bold uppercase tracking-[0.04em] text-white">
+        Civic Action Institution
+      </TextBox>
+      <TextBox spec={spec.footerYear} className="font-bold uppercase tracking-[0.04em] text-white">
+        2026
+      </TextBox>
     </div>
+  );
+}
+
+function Box({
+  spec,
+  className = "",
+  children,
+}: {
+  spec: QuoteCardBoxSpec;
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`absolute min-w-0 overflow-hidden ${className}`}
+      style={{
+        left: `${spec.leftPct}%`,
+        top: `${spec.topPct}%`,
+        width: `${spec.widthPct}%`,
+        height: spec.heightPct ? `${spec.heightPct}%` : undefined,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function TextBox({
+  as = "div",
+  spec,
+  className = "",
+  fontMaxPx = spec.fontMaxPx,
+  children,
+}: {
+  as?: "div" | "blockquote";
+  spec: QuoteCardTextSpec;
+  className?: string;
+  fontMaxPx?: number;
+  children: React.ReactNode;
+}) {
+  const Component = as;
+
+  return (
+    <Component
+      className={`absolute min-w-0 overflow-hidden ${className}`}
+      style={{
+        ...getLineClampStyle(spec.maxLines),
+        left: `${spec.leftPct}%`,
+        top: `${spec.topPct}%`,
+        width: `${spec.widthPct}%`,
+        height: spec.heightPct ? `${spec.heightPct}%` : undefined,
+        fontFamily: '"Courier New", ui-monospace, monospace',
+        fontSize: getFluidFontSize(spec.fontMinPx, spec.fontCqw, fontMaxPx),
+        lineHeight: spec.lineHeight,
+        textAlign: spec.align ?? "left",
+      }}
+    >
+      {children}
+    </Component>
   );
 }

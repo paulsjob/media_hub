@@ -11,34 +11,39 @@ export interface QuoteCardContentConstraints {
 
 export interface QuoteCardRatioLayout {
   aspectLabel: QuoteCardRatio;
-  canvasPaddingClass: string;
-  canvasGridClass: string;
-  frameMaxWidthClass: string;
-  quoteAreaClass: string;
-  quoteMaxWidthClass: string;
-  quoteMinFontPx: number;
-  quoteMaxFontPx: number;
-  quotePreferredCqw: number;
-  quoteLineHeight: number;
-  quoteMaxLines: number;
-  eyebrowClass: string;
-  eyebrowFontClass: string;
-  speakerBlockClass: string;
-  speakerRowClass: string;
-  speakerTextClass: string;
-  speakerNameFontPx: number;
-  speakerNamePreferredCqw: number;
-  speakerTitleFontPx: number;
-  speakerTitlePreferredCqw: number;
-  contextClass: string;
-  contextFontPx: number;
-  contextPreferredCqw: number;
-  contextMaxLines: number;
-  headshotClass: string;
-  dividerClass: string;
-  brandBarClass: string;
-  brandFontClass: string;
-  metadataClass: string;
+  spec: QuoteCardRatioSpec;
+}
+
+export interface QuoteCardBoxSpec {
+  leftPct: number;
+  topPct: number;
+  widthPct: number;
+  heightPct?: number;
+}
+
+export interface QuoteCardTextSpec extends QuoteCardBoxSpec {
+  fontMinPx: number;
+  fontMaxPx: number;
+  fontCqw: number;
+  lineHeight: number;
+  maxLines: number;
+  align?: "left" | "right";
+}
+
+export interface QuoteCardRatioSpec {
+  safeMarginPct: number;
+  borderThicknessPx: number;
+  cornerRadiusPx: number;
+  label: QuoteCardTextSpec;
+  quote: QuoteCardTextSpec;
+  headshot: QuoteCardBoxSpec;
+  speakerName: QuoteCardTextSpec;
+  speakerTitle: QuoteCardTextSpec;
+  context: QuoteCardTextSpec;
+  orangeRule: QuoteCardBoxSpec;
+  footer: QuoteCardBoxSpec;
+  footerText: QuoteCardTextSpec;
+  footerYear: QuoteCardTextSpec;
 }
 
 export interface QuoteCardTemplateFamily {
@@ -49,6 +54,141 @@ export interface QuoteCardTemplateFamily {
   constraints: QuoteCardContentConstraints;
   ratioLayouts: Record<QuoteCardRatio, QuoteCardRatioLayout>;
 }
+
+export const quoteCardTemplateSpec: Record<QuoteCardRatio, QuoteCardRatioSpec> = {
+  "16:9": {
+    safeMarginPct: 4.5,
+    borderThicknessPx: 0,
+    cornerRadiusPx: 0,
+    label: {
+      leftPct: 4.5,
+      topPct: 6.7,
+      widthPct: 42,
+      heightPct: 5.9,
+      fontMinPx: 13,
+      fontMaxPx: 39,
+      fontCqw: 2.55,
+      lineHeight: 1,
+      maxLines: 1,
+    },
+    quote: {
+      leftPct: 5.7,
+      topPct: 21.2,
+      widthPct: 73,
+      heightPct: 31,
+      fontMinPx: 28,
+      fontMaxPx: 76,
+      fontCqw: 5.05,
+      lineHeight: 1.17,
+      maxLines: 3,
+    },
+    headshot: { leftPct: 4.5, topPct: 58.4, widthPct: 7, heightPct: 10.2 },
+    speakerName: {
+      leftPct: 13.5,
+      topPct: 59.2,
+      widthPct: 55,
+      heightPct: 5,
+      fontMinPx: 17,
+      fontMaxPx: 42,
+      fontCqw: 2.9,
+      lineHeight: 1,
+      maxLines: 1,
+    },
+    speakerTitle: {
+      leftPct: 13.5,
+      topPct: 64.6,
+      widthPct: 45,
+      heightPct: 3.5,
+      fontMinPx: 11,
+      fontMaxPx: 24,
+      fontCqw: 1.55,
+      lineHeight: 1,
+      maxLines: 1,
+    },
+    context: {
+      leftPct: 70.5,
+      topPct: 59.4,
+      widthPct: 27,
+      heightPct: 8.8,
+      fontMinPx: 13,
+      fontMaxPx: 30,
+      fontCqw: 1.9,
+      lineHeight: 1.05,
+      maxLines: 2,
+      align: "right",
+    },
+    orangeRule: { leftPct: 5.7, topPct: 70.4, widthPct: 88.6, heightPct: 0.65 },
+    footer: { leftPct: 5.7, topPct: 73.3, widthPct: 88.6, heightPct: 5.3 },
+    footerText: {
+      leftPct: 7.5,
+      topPct: 75,
+      widthPct: 52,
+      heightPct: 3,
+      fontMinPx: 13,
+      fontMaxPx: 29,
+      fontCqw: 1.9,
+      lineHeight: 1,
+      maxLines: 1,
+    },
+    footerYear: {
+      leftPct: 89.7,
+      topPct: 75,
+      widthPct: 4.2,
+      heightPct: 3,
+      fontMinPx: 13,
+      fontMaxPx: 29,
+      fontCqw: 1.9,
+      lineHeight: 1,
+      maxLines: 1,
+      align: "right",
+    },
+  },
+  "1:1": {
+    safeMarginPct: 7,
+    borderThicknessPx: 0,
+    cornerRadiusPx: 0,
+    label: { leftPct: 7, topPct: 10, widthPct: 38, heightPct: 5.2, fontMinPx: 12, fontMaxPx: 28, fontCqw: 3.1, lineHeight: 1, maxLines: 1 },
+    quote: { leftPct: 7, topPct: 21, widthPct: 78, heightPct: 28, fontMinPx: 24, fontMaxPx: 46, fontCqw: 5.2, lineHeight: 1.08, maxLines: 4 },
+    headshot: { leftPct: 7, topPct: 62, widthPct: 11, heightPct: 11 },
+    speakerName: { leftPct: 22, topPct: 62, widthPct: 64, heightPct: 4, fontMinPx: 16, fontMaxPx: 27, fontCqw: 3.6, lineHeight: 1, maxLines: 1 },
+    speakerTitle: { leftPct: 22, topPct: 66.5, widthPct: 52, heightPct: 3, fontMinPx: 10, fontMaxPx: 18, fontCqw: 2.2, lineHeight: 1, maxLines: 1 },
+    context: { leftPct: 7, topPct: 75, widthPct: 78, heightPct: 5, fontMinPx: 11, fontMaxPx: 18, fontCqw: 2.4, lineHeight: 1.05, maxLines: 2 },
+    orangeRule: { leftPct: 7, topPct: 56, widthPct: 86, heightPct: 0.7 },
+    footer: { leftPct: 7, topPct: 85, widthPct: 86, heightPct: 6 },
+    footerText: { leftPct: 10, topPct: 87, widthPct: 50, heightPct: 3, fontMinPx: 10, fontMaxPx: 18, fontCqw: 2.3, lineHeight: 1, maxLines: 1 },
+    footerYear: { leftPct: 84, topPct: 87, widthPct: 7, heightPct: 3, fontMinPx: 10, fontMaxPx: 18, fontCqw: 2.3, lineHeight: 1, maxLines: 1, align: "right" },
+  },
+  "4:5": {
+    safeMarginPct: 7.5,
+    borderThicknessPx: 0,
+    cornerRadiusPx: 0,
+    label: { leftPct: 7.5, topPct: 11, widthPct: 40, heightPct: 4.5, fontMinPx: 12, fontMaxPx: 25, fontCqw: 3.3, lineHeight: 1, maxLines: 1 },
+    quote: { leftPct: 7.5, topPct: 22, widthPct: 78, heightPct: 31, fontMinPx: 24, fontMaxPx: 42, fontCqw: 5.4, lineHeight: 1.08, maxLines: 5 },
+    headshot: { leftPct: 7.5, topPct: 66, widthPct: 12, heightPct: 9.6 },
+    speakerName: { leftPct: 23, topPct: 66.2, widthPct: 62, heightPct: 3.8, fontMinPx: 15, fontMaxPx: 25, fontCqw: 3.8, lineHeight: 1, maxLines: 1 },
+    speakerTitle: { leftPct: 23, topPct: 70.5, widthPct: 50, heightPct: 3, fontMinPx: 10, fontMaxPx: 17, fontCqw: 2.3, lineHeight: 1, maxLines: 1 },
+    context: { leftPct: 7.5, topPct: 78, widthPct: 78, heightPct: 5, fontMinPx: 10, fontMaxPx: 17, fontCqw: 2.5, lineHeight: 1.05, maxLines: 2 },
+    orangeRule: { leftPct: 7.5, topPct: 60, widthPct: 85, heightPct: 0.55 },
+    footer: { leftPct: 7.5, topPct: 88, widthPct: 85, heightPct: 5.2 },
+    footerText: { leftPct: 10, topPct: 89.7, widthPct: 50, heightPct: 2.8, fontMinPx: 9, fontMaxPx: 16, fontCqw: 2.3, lineHeight: 1, maxLines: 1 },
+    footerYear: { leftPct: 84, topPct: 89.7, widthPct: 7, heightPct: 2.8, fontMinPx: 9, fontMaxPx: 16, fontCqw: 2.3, lineHeight: 1, maxLines: 1, align: "right" },
+  },
+  "9:16": {
+    safeMarginPct: 8.5,
+    borderThicknessPx: 0,
+    cornerRadiusPx: 0,
+    label: { leftPct: 8.5, topPct: 15, widthPct: 55, heightPct: 3.4, fontMinPx: 11, fontMaxPx: 19, fontCqw: 4.3, lineHeight: 1, maxLines: 1 },
+    quote: { leftPct: 8.5, topPct: 25, widthPct: 80, heightPct: 34, fontMinPx: 23, fontMaxPx: 35, fontCqw: 7.7, lineHeight: 1.08, maxLines: 6 },
+    headshot: { leftPct: 8.5, topPct: 70, widthPct: 18, heightPct: 10.1 },
+    speakerName: { leftPct: 31, topPct: 70.5, widthPct: 58, heightPct: 3.2, fontMinPx: 13, fontMaxPx: 19, fontCqw: 4.8, lineHeight: 1, maxLines: 1 },
+    speakerTitle: { leftPct: 31, topPct: 74.2, widthPct: 55, heightPct: 2.4, fontMinPx: 9, fontMaxPx: 14, fontCqw: 3.2, lineHeight: 1, maxLines: 1 },
+    context: { leftPct: 8.5, topPct: 81.5, widthPct: 80, heightPct: 5, fontMinPx: 9, fontMaxPx: 14, fontCqw: 3.3, lineHeight: 1.05, maxLines: 2 },
+    orangeRule: { leftPct: 8.5, topPct: 65, widthPct: 83, heightPct: 0.42 },
+    footer: { leftPct: 8.5, topPct: 90.5, widthPct: 83, heightPct: 4.2 },
+    footerText: { leftPct: 12, topPct: 91.9, widthPct: 50, heightPct: 2, fontMinPx: 8, fontMaxPx: 12, fontCqw: 3, lineHeight: 1, maxLines: 1 },
+    footerYear: { leftPct: 82, topPct: 91.9, widthPct: 7, heightPct: 2, fontMinPx: 8, fontMaxPx: 12, fontCqw: 3, lineHeight: 1, maxLines: 1, align: "right" },
+  },
+};
 
 export const quoteCardTemplateFamily: QuoteCardTemplateFamily = {
   id: "quote-card",
@@ -64,127 +204,19 @@ export const quoteCardTemplateFamily: QuoteCardTemplateFamily = {
   ratioLayouts: {
     "16:9": {
       aspectLabel: "16:9",
-      canvasPaddingClass: "p-[5%]",
-      canvasGridClass: "grid-rows-[1fr_auto]",
-      frameMaxWidthClass: "max-w-[680px]",
-      quoteAreaClass: "flex min-h-0 flex-col justify-center pb-[2%]",
-      quoteMaxWidthClass: "max-w-[74%]",
-      quoteMinFontPx: 17,
-      quoteMaxFontPx: 31,
-      quotePreferredCqw: 5.6,
-      quoteLineHeight: 1.02,
-      quoteMaxLines: 4,
-      eyebrowClass: "mb-[3%]",
-      eyebrowFontClass: "text-[clamp(7px,1.35cqw,10px)]",
-      speakerBlockClass: "min-h-0",
-      speakerRowClass: "grid grid-cols-[1fr_minmax(5rem,34%)] items-center gap-[4%]",
-      speakerTextClass: "min-w-0",
-      speakerNameFontPx: 15,
-      speakerNamePreferredCqw: 2.8,
-      speakerTitleFontPx: 11,
-      speakerTitlePreferredCqw: 2,
-      contextClass: "min-w-0 text-right",
-      contextFontPx: 11,
-      contextPreferredCqw: 2,
-      contextMaxLines: 2,
-      headshotClass: "h-[clamp(32px,8.5cqw,52px)] w-[clamp(32px,8.5cqw,52px)]",
-      dividerClass: "mb-[2.5%]",
-      brandBarClass: "mt-[3%] min-h-[clamp(22px,4.8cqw,34px)] px-[3%] py-[1.5%]",
-      brandFontClass: "text-[clamp(7px,1.45cqw,10px)]",
-      metadataClass: "flex items-center justify-between gap-3",
+      spec: quoteCardTemplateSpec["16:9"],
     },
     "1:1": {
       aspectLabel: "1:1",
-      canvasPaddingClass: "p-[7%]",
-      canvasGridClass: "grid-rows-[1fr_auto]",
-      frameMaxWidthClass: "max-w-[440px]",
-      quoteAreaClass: "flex min-h-0 flex-col justify-center pb-[5%]",
-      quoteMaxWidthClass: "max-w-full",
-      quoteMinFontPx: 18,
-      quoteMaxFontPx: 30,
-      quotePreferredCqw: 7,
-      quoteLineHeight: 1.04,
-      quoteMaxLines: 5,
-      eyebrowClass: "mb-[5%]",
-      eyebrowFontClass: "text-[clamp(8px,2cqw,10px)]",
-      speakerBlockClass: "min-h-0",
-      speakerRowClass: "flex flex-col items-start gap-[clamp(8px,3cqw,14px)]",
-      speakerTextClass: "min-w-0",
-      speakerNameFontPx: 16,
-      speakerNamePreferredCqw: 4,
-      speakerTitleFontPx: 12,
-      speakerTitlePreferredCqw: 2.8,
-      contextClass: "max-w-full text-left",
-      contextFontPx: 12,
-      contextPreferredCqw: 2.9,
-      contextMaxLines: 2,
-      headshotClass: "h-[clamp(38px,12cqw,52px)] w-[clamp(38px,12cqw,52px)]",
-      dividerClass: "mb-[4%]",
-      brandBarClass: "mt-[5%] min-h-[clamp(25px,7cqw,34px)] px-[4%] py-[2%]",
-      brandFontClass: "text-[clamp(8px,2.2cqw,10px)]",
-      metadataClass: "flex w-full items-center justify-between gap-3",
+      spec: quoteCardTemplateSpec["1:1"],
     },
     "4:5": {
       aspectLabel: "4:5",
-      canvasPaddingClass: "p-[7.5%]",
-      canvasGridClass: "grid-rows-[1fr_auto]",
-      frameMaxWidthClass: "max-w-[380px]",
-      quoteAreaClass: "flex min-h-0 flex-col justify-center pb-[8%]",
-      quoteMaxWidthClass: "max-w-full",
-      quoteMinFontPx: 18,
-      quoteMaxFontPx: 29,
-      quotePreferredCqw: 7.6,
-      quoteLineHeight: 1.05,
-      quoteMaxLines: 6,
-      eyebrowClass: "mb-[6%]",
-      eyebrowFontClass: "text-[clamp(8px,2.3cqw,10px)]",
-      speakerBlockClass: "min-h-0",
-      speakerRowClass: "flex flex-col items-start gap-[clamp(9px,3.5cqw,15px)]",
-      speakerTextClass: "min-w-0",
-      speakerNameFontPx: 16,
-      speakerNamePreferredCqw: 4.5,
-      speakerTitleFontPx: 12,
-      speakerTitlePreferredCqw: 3.1,
-      contextClass: "max-w-full text-left",
-      contextFontPx: 12,
-      contextPreferredCqw: 3.2,
-      contextMaxLines: 2,
-      headshotClass: "h-[clamp(38px,13cqw,54px)] w-[clamp(38px,13cqw,54px)]",
-      dividerClass: "mb-[4.5%]",
-      brandBarClass: "mt-[6%] min-h-[clamp(26px,7.4cqw,36px)] px-[4%] py-[2%]",
-      brandFontClass: "text-[clamp(8px,2.3cqw,10px)]",
-      metadataClass: "flex w-full items-center justify-between gap-3",
+      spec: quoteCardTemplateSpec["4:5"],
     },
     "9:16": {
       aspectLabel: "9:16",
-      canvasPaddingClass: "p-[8.5%]",
-      canvasGridClass: "grid-rows-[1fr_auto]",
-      frameMaxWidthClass: "max-w-[300px]",
-      quoteAreaClass: "flex min-h-0 flex-col justify-center pb-[12%]",
-      quoteMaxWidthClass: "max-w-full",
-      quoteMinFontPx: 18,
-      quoteMaxFontPx: 27,
-      quotePreferredCqw: 9,
-      quoteLineHeight: 1.06,
-      quoteMaxLines: 7,
-      eyebrowClass: "mb-[8%]",
-      eyebrowFontClass: "text-[clamp(8px,2.9cqw,10px)]",
-      speakerBlockClass: "min-h-0",
-      speakerRowClass: "flex flex-col items-start gap-[clamp(9px,4cqw,15px)]",
-      speakerTextClass: "min-w-0",
-      speakerNameFontPx: 15,
-      speakerNamePreferredCqw: 5,
-      speakerTitleFontPx: 11,
-      speakerTitlePreferredCqw: 3.5,
-      contextClass: "max-w-full text-left",
-      contextFontPx: 11,
-      contextPreferredCqw: 3.6,
-      contextMaxLines: 3,
-      headshotClass: "h-[clamp(38px,16cqw,54px)] w-[clamp(38px,16cqw,54px)]",
-      dividerClass: "mb-[6%]",
-      brandBarClass: "mt-[7%] min-h-[clamp(27px,9cqw,36px)] px-[5%] py-[2.5%]",
-      brandFontClass: "text-[clamp(8px,3cqw,10px)]",
-      metadataClass: "flex w-full items-center justify-between gap-3",
+      spec: quoteCardTemplateSpec["9:16"],
     },
   },
 };
@@ -196,10 +228,10 @@ export function getQuoteCardLayout(aspectLabel: string): QuoteCardRatioLayout {
 
 export function fitQuoteFontSize(quote: string, layout: QuoteCardRatioLayout) {
   const length = quote.trim().length;
-  const range = layout.quoteMaxFontPx - layout.quoteMinFontPx;
+  const range = layout.spec.quote.fontMaxPx - layout.spec.quote.fontMinPx;
   const pressure = Math.min(length / quoteCardTemplateFamily.constraints.quoteMaxCharacters, 1);
 
-  return Math.round(layout.quoteMaxFontPx - range * pressure);
+  return Math.round(layout.spec.quote.fontMaxPx - range * pressure);
 }
 
 export function getFluidFontSize(minPx: number, preferredCqw: number, maxPx: number) {
