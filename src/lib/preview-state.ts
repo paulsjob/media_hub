@@ -27,7 +27,7 @@ export function getUniquePreviewRatios(
   outputs
     .filter((output) => selectedOutputIds.includes(output.id))
     .forEach((output) => {
-      const key = `${output.width}x${output.height}`;
+      const key = output.aspectLabel;
       const existing = ratios.get(key);
 
       if (existing) {
