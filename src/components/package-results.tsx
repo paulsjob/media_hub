@@ -179,6 +179,8 @@ export function PackageResults({
         placeholderFileCount={placeholderFileCount}
       />
 
+      <PlatformCopyCard packageContext={packageContext} />
+
       <SectionCard title="Download Package">
         <DownloadAllPackage
           packageName={packageName}
@@ -314,6 +316,56 @@ function PackageReviewHeader({
   );
 }
 
+function PlatformCopyCard({
+  packageContext,
+}: {
+  packageContext: {
+    quote?: string;
+    speakerName?: string;
+    speakerTitle?: string;
+    contextLine?: string;
+  };
+}) {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copyBlocks = useMemo(() => getPlatformCopyBlocks(packageContext), [packageContext]);
+
+  async function copyValue(key: string, value: string) {
+    await copyText(value);
+    setCopiedKey(key);
+    window.setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 1800);
+  }
+
+  return (
+    <SectionCard title="Platform Copy">
+      <div className="space-y-3">
+        {copyBlocks.map((block) => (
+          <div
+            key={block.id}
+            className={`grid gap-3 rounded-lg border p-4 md:grid-cols-[9rem_1fr_auto] md:items-start ${
+              copiedKey === block.id ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"
+            }`}
+          >
+            <div>
+              <p className="text-sm font-semibold text-[#06153a]">{block.label}</p>
+              {copiedKey === block.id ? (
+                <p className="mt-1 text-xs font-semibold text-emerald-800">Copied</p>
+              ) : null}
+            </div>
+            <p className="whitespace-pre-line text-sm leading-6 text-slate-700">{block.text}</p>
+            <button
+              type="button"
+              onClick={() => copyValue(block.id, block.text)}
+              className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+            >
+              {copiedKey === block.id ? "Copied" : "Copy"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
 function ArchiveMetadataCard({
   packageContext,
   outputs,
@@ -409,6 +461,54 @@ function CopyButton({ label, onClick }: { label: string; onClick: () => void }) 
       {label}
     </button>
   );
+}
+
+function getPlatformCopyBlocks(packageContext: {
+  quote?: string;
+  speakerName?: string;
+  speakerTitle?: string;
+  contextLine?: string;
+}) {
+  const quote = packageContext.quote?.trim() || "Quote not provided.";
+  const speaker = packageContext.speakerName?.trim() || "Speaker not provided.";
+  const speakerTitle = packageContext.speakerTitle?.trim();
+  const context = packageContext.contextLine?.trim();
+  const attribution = speakerTitle ? `${speaker}, ${speakerTitle}` : speaker;
+
+  return [
+    {
+      id: "x",
+      label: "X / Twitter",
+      text: `"${quote}"\n\n- ${attribution}`,
+    },
+    {
+      id: "instagram",
+      label: "Instagram",
+      text: [`"${quote}"`, attribution, context ? `Context: ${context}` : ""].filter(Boolean).join("\n\n"),
+    },
+    {
+      id: "facebook",
+      label: "Facebook",
+      text: [`Quote card: "${quote}"`, `Attributed to ${attribution}.`, context ? `Context: ${context}` : ""]
+        .filter(Boolean)
+        .join("\n\n"),
+    },
+    {
+      id: "threads",
+      label: "Threads",
+      text: [`"${quote}"`, `- ${speaker}`, context || ""].filter(Boolean).join("\n\n"),
+    },
+    {
+      id: "altText",
+      label: "Alt Text",
+      text: `Quote card graphic featuring the quote "${quote}" attributed to ${attribution}.`,
+    },
+    {
+      id: "sourceNote",
+      label: "Source / Context Note",
+      text: `Context: ${context || "Context not provided."}\nAttribution: ${attribution}.`,
+    },
+  ];
 }
 
 function getArchiveMetadata(
