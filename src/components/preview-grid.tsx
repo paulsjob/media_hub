@@ -32,12 +32,17 @@ interface ModeckPreviewSnapshot {
 
 export function PreviewGrid({
   outputs,
+  selectedOutputIds,
+  activeOutputId,
   content,
+  onActiveOutputChange,
 }: {
   outputs: MvpOutputFormat[];
+  selectedOutputIds: string[];
+  activeOutputId: string;
   content: PreviewContent;
+  onActiveOutputChange: (outputId: string) => void;
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
   const [modeckPreview, setModeckPreview] = useState<ModeckPreviewSnapshot>({
     signature: "",
     state: "idle",
@@ -46,8 +51,12 @@ export function PreviewGrid({
     durationMs: null,
     imageSize: null,
   });
-  const previewOptions = useMemo(() => outputs.map(outputToPreviewOption), [outputs]);
-  const safeActiveIndex = Math.min(activeIndex, Math.max(previewOptions.length - 1, 0));
+  const previewOptions = useMemo(
+    () => outputs.filter((output) => selectedOutputIds.includes(output.id)).map(outputToPreviewOption),
+    [outputs, selectedOutputIds],
+  );
+  const activeOutputIndex = previewOptions.findIndex((option) => option.output.id === activeOutputId);
+  const safeActiveIndex = activeOutputIndex >= 0 ? activeOutputIndex : 0;
   const activeOption = previewOptions[safeActiveIndex];
   const activeRatio = activeOption?.ratio;
   const hasMultipleRatios = previewOptions.length > 1;
@@ -187,14 +196,21 @@ export function PreviewGrid({
   }, [activeRatio, canUseModeckPreview, content, requestSignature]);
 
   function showPreviousPreview() {
-    setActiveIndex((current) => {
-      const index = Math.min(current, previewOptions.length - 1);
-      return index === 0 ? previewOptions.length - 1 : index - 1;
-    });
+    const nextIndex = safeActiveIndex === 0 ? previewOptions.length - 1 : safeActiveIndex - 1;
+    const nextOutputId = previewOptions[nextIndex]?.output.id;
+
+    if (nextOutputId) {
+      onActiveOutputChange(nextOutputId);
+    }
   }
 
   function showNextPreview() {
-    setActiveIndex((current) => (Math.min(current, previewOptions.length - 1) + 1) % previewOptions.length);
+    const nextIndex = (safeActiveIndex + 1) % previewOptions.length;
+    const nextOutputId = previewOptions[nextIndex]?.output.id;
+
+    if (nextOutputId) {
+      onActiveOutputChange(nextOutputId);
+    }
   }
 
   return (
@@ -203,35 +219,17 @@ export function PreviewGrid({
         <PreviewStatus status={getPreviewStatus(activeModeckPreview.state)} />
         {activeOption ? (
           <span className="text-sm font-semibold text-slate-500">
-            {safeActiveIndex + 1} of {previewOptions.length}
+            {safeActiveIndex + 1} of {previewOptions.length} selected
           </span>
         ) : null}
       </div>
 
       {activeRatio ? (
         <div className="space-y-4">
-          {hasMultipleRatios ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-              {previewOptions.map((option, index) => {
-                const isActive = index === safeActiveIndex;
-
-                return (
-                  <button
-                    key={option.output.id}
-                    type="button"
-                    onClick={() => setActiveIndex(index)}
-                    className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition ${
-                      isActive
-                        ? "border-blue-300 bg-blue-50 text-blue-800"
-                        : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
-                    }`}
-                    aria-pressed={isActive}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-              <div className="ml-auto flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <span className="text-sm font-semibold text-[#06153a]">{activeOption.label}</span>
+            {hasMultipleRatios ? (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={showPreviousPreview}
@@ -251,8 +249,8 @@ export function PreviewGrid({
                   &gt;
                 </button>
               </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
           <div className="space-y-3">
             <ModeckPreviewPanel
@@ -275,7 +273,7 @@ export function PreviewGrid({
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-            <p className="font-semibold text-[#06153a]">Choose at least one output to preview and generate.</p>
+          <p className="font-semibold text-[#06153a]">Choose at least one output to preview and generate.</p>
         </div>
       )}
     </div>
