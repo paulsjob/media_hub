@@ -142,6 +142,12 @@ export function PackageGenerator({
       };
     });
     const params = new URLSearchParams({
+      template: "quote-card",
+      quote: content.quote,
+      speakerName: content.speakerName,
+      speakerTitle: content.speakerTitle,
+      contextLine: content.contextLine,
+      headshotFilename: content.headshot,
       outputs: selectedIds.join(","),
       renders: encodeURIComponent(JSON.stringify(renderedOutputs)),
     });
