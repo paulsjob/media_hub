@@ -92,15 +92,6 @@ export function PreviewGrid({
       return modeckPreview;
     }
 
-    if (modeckPreview.imageSrc) {
-      return {
-        ...modeckPreview,
-        signature: requestSignature,
-        state: "loading",
-        message: "Updating MoDeck preview...",
-      };
-    }
-
     return {
       signature: requestSignature,
       state: "loading",
@@ -287,9 +278,9 @@ export function PreviewGrid({
                 )
               }
             />
-            {activeModeckPreview.imageSrc ? null : (
+            {!activeModeckPreview.imageSrc && activeModeckPreview.state !== "loading" ? (
               <TemplatePreviewRenderer ratio={activeRatio} content={content} />
-            )}
+            ) : null}
           </div>
         </div>
       ) : (
@@ -325,15 +316,29 @@ function ModeckPreviewPanel({
 
   if (!imageSrc) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-        <div className="mb-1 flex items-center gap-2 font-semibold text-[#06153a]">
-          <span
-            className={`h-2 w-2 rounded-full ${state === "loading" ? "bg-blue-500" : "bg-orange-500"}`}
-            aria-hidden="true"
-          />
-          {state === "loading" ? "MoDeck preview rendering" : "Local preview active"}
+      <div
+        className={`grid min-h-[360px] place-items-center rounded-lg border border-dashed p-8 text-center text-sm ${
+          state === "loading"
+            ? "border-blue-200 bg-blue-50 text-blue-900"
+            : "border-slate-300 bg-slate-50 text-slate-600"
+        }`}
+      >
+        <div>
+          <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-white shadow-sm">
+            <span
+              className={`h-3 w-3 rounded-full ${state === "loading" ? "animate-pulse bg-blue-500" : "bg-orange-500"}`}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="mb-1 flex items-center justify-center gap-2 font-semibold text-[#06153a]">
+            <span
+              className={`h-2 w-2 rounded-full ${state === "loading" ? "bg-blue-500" : "bg-orange-500"}`}
+              aria-hidden="true"
+            />
+            {state === "loading" ? "MoDeck preview rendering" : "Local preview active"}
+          </div>
+          <p>{message}</p>
         </div>
-        <p>{message}</p>
       </div>
     );
   }
