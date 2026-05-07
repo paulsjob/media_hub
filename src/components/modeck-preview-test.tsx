@@ -31,6 +31,8 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
   const [form, setForm] = useState(defaults);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
+  const [imageState, setImageState] = useState<"idle" | "loading" | "loaded" | "error">("idle");
+  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
   function updateField(key: keyof typeof defaults, value: string) {
     setForm((current) => ({
@@ -42,6 +44,8 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
   async function fetchPreview() {
     setLoading(true);
     setResult(null);
+    setImageState("idle");
+    setImageSize(null);
 
     try {
       const response = await fetch("/api/modeck/preview", {
@@ -51,6 +55,7 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
       });
       const data = (await response.json()) as PreviewResult;
       setResult(data);
+      setImageState(data.imageBase64 ? "loading" : "idle");
     } catch (error) {
       setResult({
         ok: false,
@@ -137,8 +142,8 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
             </button>
           </form>
 
-          <div className="space-y-5">
-            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="min-w-0 space-y-5">
+            <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-sm font-semibold uppercase tracking-wide">MoDeck Preview Response</h2>
                 <p className="text-sm text-slate-500">
@@ -147,26 +152,75 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
                 </p>
               </div>
 
-              <div className="grid min-h-[360px] place-items-center rounded-md border border-dashed border-slate-300 bg-slate-50 p-4">
+              <div className="w-full min-w-0 overflow-hidden rounded-md border border-slate-300 bg-slate-950">
+                <div className="flex min-h-9 flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-3 py-2 text-xs text-slate-200">
+                  <span className="font-semibold uppercase tracking-wide">
+                    {loading
+                      ? "Requesting"
+                      : imageState === "loaded"
+                        ? "Preview loaded"
+                        : imageState === "error"
+                          ? "Image decode failed"
+                          : result?.ok
+                            ? "Preview data received"
+                            : "Waiting"}
+                  </span>
+                  <span className="text-slate-400">
+                    {imageSize
+                      ? `${imageSize.width}x${imageSize.height}`
+                      : result?.imageBase64
+                        ? `${Math.round(result.imageBase64.length / 1024)} KB data URL`
+                        : "No image yet"}
+                  </span>
+                </div>
+                <div className="grid min-h-[420px] w-full min-w-0 place-items-center bg-[linear-gradient(45deg,#1e293b_25%,transparent_25%),linear-gradient(-45deg,#1e293b_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1e293b_75%),linear-gradient(-45deg,transparent_75%,#1e293b_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] p-4">
                 {result?.imageBase64 ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={toImageSrc(result.imageBase64)}
-                    alt="MoDeck preview result"
-                    className="max-h-[560px] max-w-full object-contain"
-                  />
+                  <div className="flex w-full min-w-0 flex-col items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={toImageSrc(result.imageBase64)}
+                      alt="MoDeck preview result"
+                      onLoad={(event) => {
+                        setImageState("loaded");
+                        setImageSize({
+                          width: event.currentTarget.naturalWidth,
+                          height: event.currentTarget.naturalHeight,
+                        });
+                      }}
+                      onError={() => setImageState("error")}
+                      className="block max-h-[620px] max-w-full rounded-sm border border-slate-700 bg-white object-contain shadow-2xl"
+                    />
+                    <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-slate-300">
+                      <a
+                        href={toImageSrc(result.imageBase64)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-md border border-slate-600 px-3 py-1.5 font-semibold text-white hover:bg-slate-800"
+                      >
+                        Open image
+                      </a>
+                      <span>
+                        {imageState === "loading"
+                          ? "Decoding image..."
+                          : imageState === "error"
+                            ? "The preview returned, but this browser could not decode it."
+                            : "Rendered from MoDeck previewData.preview"}
+                      </span>
+                    </div>
+                  </div>
                 ) : (
-                  <p className="max-w-md text-center text-sm text-slate-500">
+                  <p className="max-w-md text-center text-sm text-slate-300">
                     {result?.error ??
                       "Run a preview request to display the base64 still returned by MoDeck."}
                   </p>
                 )}
+                </div>
               </div>
             </section>
 
-            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide">Raw Summary</h2>
-              <pre className="max-h-80 overflow-auto rounded-md bg-slate-950 p-4 text-xs leading-5 text-slate-100">
+              <pre className="max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs leading-5 text-slate-100">
                 {JSON.stringify(result ?? { configured }, null, 2)}
               </pre>
             </section>
