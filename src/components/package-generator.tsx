@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PreviewGrid } from "@/components/preview-grid";
 import {
@@ -12,7 +12,7 @@ import {
 import { mediaLabPayloadToModeckRenderRequest } from "@/lib/modeck/modeck-mapping";
 import { mockModeckAdapter } from "@/lib/modeck/mock-modeck-adapter";
 import type { MvpOutputFormat } from "@/lib/output-formats";
-import { getUniquePreviewRatios, type PreviewContent } from "@/lib/preview-state";
+import type { PreviewContent } from "@/lib/preview-state";
 import type { PackageField, Template } from "@/lib/types";
 
 const fieldMap: Record<string, keyof PreviewContent> = {
@@ -62,11 +62,6 @@ export function PackageGenerator({
   }));
   const [outputsOpen, setOutputsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const selectedRatios = useMemo(
-    () => getUniquePreviewRatios(outputs, selectedIds),
-    [outputs, selectedIds],
-  );
 
   function toggleOutput(id: string) {
     setSelectedIds((current) =>
@@ -165,25 +160,13 @@ export function PackageGenerator({
 
         <div className="space-y-4">
           <SectionCard title="Live MoDeck Preview">
-            <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-[#06153a]">
-                Validate the current fields before package generation.
-              </p>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                The active 16:9 source preview renders through MoDeck when available. Other selected ratios continue to
-                use the local layout preview until their MoDeck templates are connected.
-              </p>
-            </div>
-            <PreviewGrid ratios={selectedRatios} content={content} />
+            <PreviewGrid outputs={outputs} content={content} />
           </SectionCard>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-semibold text-[#06153a]">Approve the live preview before choosing final package outputs.</p>
-                <p className="mt-1 text-sm text-slate-600">
-                  Once the preview matches the current fields, continue to output selection and package generation.
-                </p>
               </div>
               {outputsOpen ? (
                 <span className="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800">

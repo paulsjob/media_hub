@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PreviewStatus } from "@/components/preview-status";
 import { TemplatePreviewRenderer } from "@/components/template-preview-renderer";
+import type { MvpOutputFormat } from "@/lib/output-formats";
 import type { PreviewContent, PreviewRatio } from "@/lib/preview-state";
 
 type ModeckPreviewState = "idle" | "loading" | "loaded" | "error" | "unsupported";
@@ -30,10 +31,10 @@ interface ModeckPreviewSnapshot {
 }
 
 export function PreviewGrid({
-  ratios,
+  outputs,
   content,
 }: {
-  ratios: PreviewRatio[];
+  outputs: MvpOutputFormat[];
   content: PreviewContent;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -45,9 +46,11 @@ export function PreviewGrid({
     durationMs: null,
     imageSize: null,
   });
-  const safeActiveIndex = Math.min(activeIndex, Math.max(ratios.length - 1, 0));
-  const activeRatio = ratios[safeActiveIndex];
-  const hasMultipleRatios = ratios.length > 1;
+  const previewOptions = useMemo(() => outputs.map(outputToPreviewOption), [outputs]);
+  const safeActiveIndex = Math.min(activeIndex, Math.max(previewOptions.length - 1, 0));
+  const activeOption = previewOptions[safeActiveIndex];
+  const activeRatio = activeOption?.ratio;
+  const hasMultipleRatios = previewOptions.length > 1;
   const canUseModeckPreview = activeRatio?.aspectLabel === "16:9";
   const requestSignature = useMemo(
     () =>
@@ -82,7 +85,7 @@ export function PreviewGrid({
         signature: requestSignature,
         state: "unsupported",
         imageSrc: null,
-        message: "Live MoDeck source preview is connected for 16:9. This ratio is using the local layout preview.",
+        message: "Local layout preview.",
         durationMs: null,
         imageSize: null,
       };
@@ -96,7 +99,7 @@ export function PreviewGrid({
       signature: requestSignature,
       state: "loading",
       imageSrc: null,
-      message: "Requesting MoDeck preview...",
+      message: "Rendering preview...",
       durationMs: null,
       imageSize: null,
     };
@@ -113,7 +116,7 @@ export function PreviewGrid({
         signature: requestSignature,
         state: "loading",
         imageSrc: null,
-        message: "Requesting MoDeck preview...",
+        message: "Rendering preview...",
         durationMs: null,
         imageSize: null,
       });
@@ -185,81 +188,69 @@ export function PreviewGrid({
 
   function showPreviousPreview() {
     setActiveIndex((current) => {
-      const index = Math.min(current, ratios.length - 1);
-      return index === 0 ? ratios.length - 1 : index - 1;
+      const index = Math.min(current, previewOptions.length - 1);
+      return index === 0 ? previewOptions.length - 1 : index - 1;
     });
   }
 
   function showNextPreview() {
-    setActiveIndex((current) => (Math.min(current, ratios.length - 1) + 1) % ratios.length);
+    setActiveIndex((current) => (Math.min(current, previewOptions.length - 1) + 1) % previewOptions.length);
   }
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="font-semibold text-[#06153a]">Live Preview</h3>
-          <p className="text-sm text-slate-500">MoDeck renders the active source preview when available.</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <PreviewStatus status={getPreviewStatus(activeModeckPreview.state)} />
+        {activeOption ? (
+          <span className="text-sm font-semibold text-slate-500">
+            {safeActiveIndex + 1} of {previewOptions.length}
+          </span>
+        ) : null}
       </div>
 
       {activeRatio ? (
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-[#06153a]">
-                Preview {safeActiveIndex + 1} of {ratios.length} - {activeRatio.aspectLabel}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Used by {activeRatio.outputIds.length} selected{" "}
-                {activeRatio.outputIds.length === 1 ? "output" : "outputs"}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={showPreviousPreview}
-                disabled={!hasMultipleRatios}
-                aria-label="Show previous preview"
-                className="grid h-10 w-10 place-items-center rounded-md border border-slate-300 bg-white text-lg font-semibold text-[#06153a] transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                &lt;
-              </button>
-              <button
-                type="button"
-                onClick={showNextPreview}
-                disabled={!hasMultipleRatios}
-                aria-label="Show next preview"
-                className="grid h-10 w-10 place-items-center rounded-md border border-slate-300 bg-white text-lg font-semibold text-[#06153a] transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                &gt;
-              </button>
-            </div>
-          </div>
-
           {hasMultipleRatios ? (
-            <div className="flex flex-wrap gap-2">
-              {ratios.map((ratio, index) => {
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+              {previewOptions.map((option, index) => {
                 const isActive = index === safeActiveIndex;
 
                 return (
                   <button
-                    key={ratio.key}
+                    key={option.output.id}
                     type="button"
                     onClick={() => setActiveIndex(index)}
-                    className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                    className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition ${
                       isActive
                         ? "border-blue-300 bg-blue-50 text-blue-800"
                         : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
                     }`}
                     aria-pressed={isActive}
                   >
-                    {ratio.aspectLabel}
+                    {option.label}
                   </button>
                 );
               })}
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={showPreviousPreview}
+                  disabled={!hasMultipleRatios}
+                  aria-label="Show previous preview"
+                  className="grid h-8 w-8 place-items-center rounded-md border border-slate-300 bg-white text-base font-semibold text-[#06153a] transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  &lt;
+                </button>
+                <button
+                  type="button"
+                  onClick={showNextPreview}
+                  disabled={!hasMultipleRatios}
+                  aria-label="Show next preview"
+                  className="grid h-8 w-8 place-items-center rounded-md border border-slate-300 bg-white text-base font-semibold text-[#06153a] transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  &gt;
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -269,7 +260,6 @@ export function PreviewGrid({
               imageSrc={activeModeckPreview.imageSrc}
               imageSize={activeModeckPreview.imageSize}
               durationMs={activeModeckPreview.durationMs}
-              message={activeModeckPreview.message}
               onImageLoad={(width, height) =>
                 setModeckPreview((current) =>
                   current.signature === requestSignature
@@ -285,10 +275,7 @@ export function PreviewGrid({
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-          <p className="font-semibold text-[#06153a]">Choose at least one output to preview and generate.</p>
-          <p className="mt-2 text-sm text-slate-500">
-            Select a still or video size and MEDIA LAB will show the matching preview ratio.
-          </p>
+            <p className="font-semibold text-[#06153a]">Choose at least one output to preview and generate.</p>
         </div>
       )}
     </div>
@@ -300,14 +287,12 @@ function ModeckPreviewPanel({
   imageSrc,
   imageSize,
   durationMs,
-  message,
   onImageLoad,
 }: {
   state: ModeckPreviewState;
   imageSrc: string | null;
   imageSize: { width: number; height: number } | null;
   durationMs: number | null;
-  message: string;
   onImageLoad: (width: number, height: number) => void;
 }) {
   if (state === "idle") {
@@ -335,9 +320,8 @@ function ModeckPreviewPanel({
               className={`h-2 w-2 rounded-full ${state === "loading" ? "bg-blue-500" : "bg-orange-500"}`}
               aria-hidden="true"
             />
-            {state === "loading" ? "MoDeck preview rendering" : "Local preview active"}
+            {state === "loading" ? "MoDeck preview rendering" : "Local preview"}
           </div>
-          <p>{message}</p>
         </div>
       </div>
     );
@@ -381,7 +365,6 @@ function ModeckPreviewPanel({
         >
           Open image
         </a>
-        <span>{message}</span>
       </div>
     </div>
   );
@@ -407,4 +390,18 @@ function getModeckHeadshotFilename(value: string) {
   const trimmed = value.trim();
 
   return /\.[a-z0-9]{2,5}$/i.test(trimmed) ? trimmed : "";
+}
+
+function outputToPreviewOption(output: MvpOutputFormat) {
+  return {
+    output,
+    label: output.type === "video" ? `Video ${output.label}` : output.label,
+    ratio: {
+      key: output.id,
+      aspectLabel: output.aspectLabel,
+      width: output.width,
+      height: output.height,
+      outputIds: [output.id],
+    } satisfies PreviewRatio,
+  };
 }
