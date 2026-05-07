@@ -153,7 +153,7 @@ export function PackageGenerator({
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] xl:items-start">
         <div className="space-y-4">
-          <SectionCard title="Package Outputs">
+          <SectionCard title="Package Outputs" className="p-4">
             <OutputSelector
               outputs={outputs}
               selectedIds={selectedIds}
@@ -313,56 +313,63 @@ function OutputSelector({
   onToggle: (id: string) => void;
 }) {
   return (
-    <div className="grid gap-3">
-      {(["still", "video"] as const).map((type) => (
-        <div key={type}>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {type === "still" ? "Stills" : "Videos"}
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {outputs
-              .filter((output) => output.type === type)
-              .map((output) => {
-                const selected = selectedIds.includes(output.id);
-                const active = activeOutputId === output.id;
+    <div className="flex flex-wrap gap-2">
+      {outputs.map((output) => {
+        const selected = selectedIds.includes(output.id);
+        const active = activeOutputId === output.id;
 
-                return (
-                  <button
-                    key={output.id}
-                    type="button"
-                    onClick={() => onToggle(output.id)}
-                    aria-pressed={selected}
-                    title={getOutputTitle(output)}
-                    className={`min-h-16 rounded-lg border px-2 py-2 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
-                      active
-                        ? "border-blue-500 bg-blue-50 shadow-sm"
-                        : selected
-                          ? "border-slate-300 bg-white"
-                          : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
-                    }`}
-                  >
-                    <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {type === "still" ? "Still" : "Video"}
-                    </span>
-                    <span className="mt-1 block text-lg font-semibold text-[#06153a]">{output.aspectLabel}</span>
-                    <span
-                      className={`mt-1 inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold ${
-                        active
-                          ? "bg-blue-100 text-blue-800"
-                          : selected
-                            ? "bg-emerald-50 text-emerald-800"
-                            : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {active ? "Preview" : selected ? "On" : "Add"}
-                    </span>
-                  </button>
-                );
-              })}
-          </div>
-        </div>
-      ))}
+        return (
+          <button
+            key={output.id}
+            type="button"
+            onClick={() => onToggle(output.id)}
+            aria-pressed={selected}
+            title={getOutputTitle(output)}
+            className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+              active
+                ? "border-blue-500 bg-blue-50 text-blue-900 shadow-sm"
+                : selected
+                  ? "border-emerald-300 bg-emerald-50 text-[#06153a]"
+                  : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+            }`}
+          >
+            <RatioGlyph ratio={output.aspectLabel} active={active} selected={selected} />
+            <span>{output.type === "video" ? "Video" : "Still"} {output.aspectLabel}</span>
+            {selected ? <span aria-hidden="true">OK</span> : null}
+          </button>
+        );
+      })}
     </div>
+  );
+}
+
+function RatioGlyph({
+  ratio,
+  active,
+  selected,
+}: {
+  ratio: string;
+  active: boolean;
+  selected: boolean;
+}) {
+  const shapeClass = {
+    "16:9": "h-3 w-5",
+    "1:1": "h-4 w-4",
+    "4:5": "h-5 w-4",
+    "9:16": "h-5 w-3",
+  }[ratio] ?? "h-4 w-4";
+
+  return (
+    <span
+      className={`inline-block rounded-sm border ${
+        active
+          ? "border-blue-600 bg-blue-200"
+          : selected
+            ? "border-emerald-600 bg-emerald-100"
+            : "border-slate-400 bg-slate-100"
+      } ${shapeClass}`}
+      aria-hidden="true"
+    />
   );
 }
 

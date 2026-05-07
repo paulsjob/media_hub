@@ -214,21 +214,21 @@ export function PreviewGrid({
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PreviewStatus status={getPreviewStatus(activeModeckPreview.state)} />
-        {activeOption ? (
-          <span className="text-sm font-semibold text-slate-500">
-            {safeActiveIndex + 1} of {previewOptions.length} selected
-          </span>
-        ) : null}
-      </div>
-
+    <div className="space-y-3">
       {activeRatio ? (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-            <span className="text-sm font-semibold text-[#06153a]">{getActiveFormatLabel(activeOption.output)}</span>
-            {hasMultipleRatios ? (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="flex min-h-7 flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-[#06153a]">Preview</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <PreviewStatus status={getPreviewStatus(activeModeckPreview.state)} />
+                <span className="text-sm font-semibold text-slate-500">
+                  {safeActiveIndex + 1} of {previewOptions.length} selected
+                </span>
+              </div>
+            </div>
+            <div className="mt-1 flex min-h-8 flex-wrap items-center justify-between gap-2">
+              <span className="text-sm text-slate-600">{getActiveFormatLabel(activeOption.output)}</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -249,7 +249,7 @@ export function PreviewGrid({
                   &gt;
                 </button>
               </div>
-            ) : null}
+            </div>
           </div>
 
           <div className="space-y-3">
