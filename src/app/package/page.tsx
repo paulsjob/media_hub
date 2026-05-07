@@ -54,6 +54,9 @@ export default async function PackagePage({
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Selected Outputs</p>
                 <OutputSummary outputs={selectedOutputs} />
+                <div className="mt-4">
+                  <SecondaryButton href={backToGenerateHref}>Change Outputs</SecondaryButton>
+                </div>
               </div>
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -186,6 +189,7 @@ function getBackToGenerateHref(params: {
   if (params.speakerTitle) query.set("speakerTitle", params.speakerTitle);
   if (params.contextLine) query.set("contextLine", params.contextLine);
   if (params.headshotFilename) query.set("headshotFilename", params.headshotFilename);
+  if (params.outputs) query.set("outputs", params.outputs);
 
   const firstOutput = params.outputs?.split(",").find(Boolean);
   const size = firstOutput?.replace(/^still-/, "").replace(/^video-/, "");

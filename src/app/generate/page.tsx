@@ -13,6 +13,7 @@ export default async function GeneratePage({
     contextLine?: string;
     headshotFilename?: string;
     size?: string;
+    outputs?: string;
     frame?: string;
   }>;
 }) {
@@ -20,7 +21,7 @@ export default async function GeneratePage({
   const preview = mediaLab.previewQuoteCardPackage();
   const view = mediaLab.getAssetPackageView(preview.packageDraft.id);
   const initialContent = getInitialContent(params);
-  const initialSelectedIds = getInitialSelectedIds(params.size);
+  const initialSelectedIds = getInitialSelectedIds(params.outputs, params.size);
   const startedFromPreviewTest = hasPreviewTestParams(params);
 
   return (
@@ -85,7 +86,13 @@ function getInitialContent(params: {
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
-function getInitialSelectedIds(size?: string) {
+function getInitialSelectedIds(outputs?: string, size?: string) {
+  const selectedFromOutputs = outputs?.split(",").filter(Boolean);
+
+  if (selectedFromOutputs && selectedFromOutputs.length > 0) {
+    return selectedFromOutputs;
+  }
+
   const outputIdBySize: Record<string, string> = {
     "1920x1080": "still-1920x1080",
     "1080x1080": "still-1080x1080",

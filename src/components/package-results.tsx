@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { DownloadRow, SectionCard } from "@/components/ui";
+import { SectionCard } from "@/components/ui";
 import type { MvpOutputFormat } from "@/lib/output-formats";
 
 export interface PackageRenderResult {
@@ -36,6 +36,7 @@ export function PackageResults({
   packageName: string;
 }) {
   const [renderResults, setRenderResults] = useState(initialRenderResults);
+  const [downloadedOutputIds, setDownloadedOutputIds] = useState<string[]>([]);
   const outputs = useMemo(() => [...stills, ...videos], [stills, videos]);
   const resultList = useMemo(() => Object.values(renderResults), [renderResults]);
   const readyDownloads = useMemo(
@@ -51,10 +52,18 @@ export function PackageResults({
                 output,
                 downloadUrl,
                 filename: getDownloadFilename(packageName, output, result?.source),
+                source: result?.source,
               }
             : null;
         })
-        .filter((item): item is { output: MvpOutputFormat; downloadUrl: string; filename: string } => Boolean(item)),
+        .filter(
+          (item): item is {
+            output: MvpOutputFormat;
+            downloadUrl: string;
+            filename: string;
+            source: PackageRenderResult["source"] | undefined;
+          } => Boolean(item),
+        ),
     [outputs, packageName, renderResults],
   );
   const hasLiveModeckOutput = resultList.some(
@@ -165,15 +174,17 @@ export function PackageResults({
         <div className="space-y-3">
           {stills.length > 0 ? (
             stills.map((output) => (
-              <DownloadRow
+              <DeliveryOutputCard
                 key={output.id}
                 output={output}
-                editId={renderResults[output.id]?.editId}
-                downloadUrl={renderResults[output.id]?.temporaryDownloadUrl}
-                source={renderResults[output.id]?.source}
-                status={renderResults[output.id]?.status}
-                progress={renderResults[output.id]?.progress}
-                errorMessage={renderResults[output.id]?.errorMessage}
+                result={renderResults[output.id]}
+                downloaded={downloadedOutputIds.includes(output.id)}
+                packageName={packageName}
+                onDownloaded={() =>
+                  setDownloadedOutputIds((current) =>
+                    current.includes(output.id) ? current : [...current, output.id],
+                  )
+                }
               />
             ))
           ) : (
@@ -186,15 +197,17 @@ export function PackageResults({
         <div className="space-y-3">
           {videos.length > 0 ? (
             videos.map((output) => (
-              <DownloadRow
+              <DeliveryOutputCard
                 key={output.id}
                 output={output}
-                editId={renderResults[output.id]?.editId}
-                downloadUrl={renderResults[output.id]?.temporaryDownloadUrl}
-                source={renderResults[output.id]?.source}
-                status={renderResults[output.id]?.status}
-                progress={renderResults[output.id]?.progress}
-                errorMessage={renderResults[output.id]?.errorMessage}
+                result={renderResults[output.id]}
+                downloaded={downloadedOutputIds.includes(output.id)}
+                packageName={packageName}
+                onDownloaded={() =>
+                  setDownloadedOutputIds((current) =>
+                    current.includes(output.id) ? current : [...current, output.id],
+                  )
+                }
               />
             ))
           ) : (
@@ -212,12 +225,20 @@ function DownloadAllPackage({
   totalOutputs,
 }: {
   packageName: string;
-  files: Array<{ output: MvpOutputFormat; downloadUrl: string; filename: string }>;
+  files: Array<{
+    output: MvpOutputFormat;
+    downloadUrl: string;
+    filename: string;
+    source: PackageRenderResult["source"] | undefined;
+  }>;
   totalOutputs: number;
 }) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const readyCount = files.length;
   const disabled = readyCount === 0 || isDownloading;
+  const allOutputsReady = readyCount === totalOutputs && files.every((file) => file.source !== "mock-placeholder");
+  const buttonLabel = allOutputsReady ? "Download All Package" : "Download All Ready Files";
 
   async function downloadAll() {
     if (disabled) {
@@ -229,6 +250,7 @@ function DownloadAllPackage({
     try {
       if (files.length === 1) {
         await downloadUrl(files[0].downloadUrl, files[0].filename);
+        setDownloaded(true);
         return;
       }
 
@@ -249,6 +271,7 @@ function DownloadAllPackage({
 
       const blob = await zip.generateAsync({ type: "blob" });
       downloadBlob(blob, `${packageName}.zip`);
+      setDownloaded(true);
     } finally {
       setIsDownloading(false);
     }
@@ -263,7 +286,11 @@ function DownloadAllPackage({
             : "No package files ready yet"}
         </p>
         <p className="mt-1 text-sm text-slate-600">
-          {readyCount > 0
+          {downloaded
+            ? files.length > 1
+              ? "Downloaded ZIP."
+              : "Package downloaded."
+            : readyCount > 0
             ? "Download all currently ready outputs. Rendering or failed files are skipped."
             : "Download All will activate when at least one output is ready."}
         </p>
@@ -275,10 +302,159 @@ function DownloadAllPackage({
         className="inline-flex min-h-11 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold !text-white shadow-sm hover:bg-[#12306a] disabled:cursor-not-allowed disabled:bg-slate-300"
         style={{ color: "#ffffff" }}
       >
-        <span className="text-white">{isDownloading ? "Preparing Package..." : "Download All Package"}</span>
+        <span className="text-white">{isDownloading ? "Preparing Package..." : buttonLabel}</span>
       </button>
     </div>
   );
+}
+
+function DeliveryOutputCard({
+  output,
+  result,
+  downloaded,
+  packageName,
+  onDownloaded,
+}: {
+  output: MvpOutputFormat;
+  result?: PackageRenderResult;
+  downloaded: boolean;
+  packageName: string;
+  onDownloaded: () => void;
+}) {
+  const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
+  const state = getDeliveryState(result);
+  const canDownload = Boolean(resolvedDownloadUrl) && (result?.source !== "modeck-render" || result.status === "completed");
+  const showProgress = result?.source === "modeck-render" && ["queued", "rendering", "completed"].includes(result.status ?? "");
+
+  async function downloadFile() {
+    if (!canDownload) {
+      return;
+    }
+
+    await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output, result?.source));
+    onDownloaded();
+  }
+
+  return (
+    <div className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[150px_1fr_auto] md:items-center">
+      <OutputThumbnail output={output} source={result?.source} state={state} />
+      <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-semibold text-[#06153a]">
+            {output.type === "video" ? "Video" : "Still"} - {output.label}
+          </p>
+          <StateBadge state={downloaded ? "Downloaded" : state} />
+        </div>
+        <p className="mt-1 text-sm text-slate-500">{getStateHelp(state)}</p>
+        {result?.editId ? <p className="mt-1 text-xs text-slate-400">Edit ID: {result.editId}</p> : null}
+        {showProgress ? (
+          <div className="mt-3 max-w-xs">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-emerald-500"
+                style={{ width: `${Math.max(5, Math.min(100, result?.progress ?? (state === "Ready" ? 100 : 5)))}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <div className="flex flex-col gap-2 md:items-end">
+        {canDownload ? (
+          <>
+            <button
+              type="button"
+              onClick={downloadFile}
+              className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+            >
+              {downloaded ? "Downloaded" : "Download"}
+            </button>
+            <a
+              href={resolvedDownloadUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm font-semibold text-blue-700 hover:text-blue-900"
+            >
+              Open preview
+            </a>
+          </>
+        ) : (
+          <span className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-500">
+            {state}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OutputThumbnail({
+  output,
+  source,
+  state,
+}: {
+  output: MvpOutputFormat;
+  source?: PackageRenderResult["source"];
+  state: DeliveryState;
+}) {
+  return (
+    <div className="grid place-items-center rounded-md border border-slate-200 bg-slate-50 p-3">
+      <div
+        className="grid max-h-28 w-full place-items-center rounded-sm border border-slate-300 bg-white text-center shadow-sm"
+        style={{ aspectRatio: `${output.width} / ${output.height}` }}
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {source === "mock-placeholder" ? "Placeholder" : state}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#06153a]">{output.aspectLabel}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{output.type === "video" ? "Video" : "Still"}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type DeliveryState = "Ready" | "Rendering" | "Placeholder" | "Failed";
+
+function getDeliveryState(result?: PackageRenderResult): DeliveryState {
+  if (!result) {
+    return "Rendering";
+  }
+
+  if (result.status === "failed" || result.status === "canceled" || result.errorMessage) {
+    return "Failed";
+  }
+
+  if (result.source === "mock-placeholder") {
+    return "Placeholder";
+  }
+
+  if (result.source === "modeck-render" && result.status !== "completed") {
+    return "Rendering";
+  }
+
+  return "Ready";
+}
+
+function StateBadge({ state }: { state: DeliveryState | "Downloaded" }) {
+  const className = {
+    Ready: "bg-emerald-50 text-emerald-800",
+    Downloaded: "bg-emerald-100 text-emerald-900",
+    Rendering: "bg-blue-50 text-blue-800",
+    Placeholder: "bg-slate-100 text-slate-700",
+    Failed: "bg-orange-50 text-orange-800",
+  }[state];
+
+  return <span className={`rounded-md px-2 py-1 text-xs font-semibold ${className}`}>{state}</span>;
+}
+
+function getStateHelp(state: DeliveryState) {
+  return {
+    Ready: "Final output ready.",
+    Rendering: "Final output is still rendering.",
+    Placeholder: "Placeholder file, final MoDeck template not connected yet.",
+    Failed: "Render did not complete.",
+  }[state];
 }
 
 async function downloadUrl(url: string, filename: string) {
