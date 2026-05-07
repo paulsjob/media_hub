@@ -66,7 +66,7 @@ export default function TemplatesPage() {
         eyebrow="Media Operations / Template Library"
         title="Template"
         accent="Library"
-        subtitle="Start with a connected template, then turn a message into reusable package outputs."
+        subtitle="Choose the first connected template in the Media Lab factory, with planned formats visible on the roadmap."
       />
 
       <div className="mb-5 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
@@ -93,7 +93,7 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Primary Connected Template</p>
           <h2 className="mt-1 text-2xl font-semibold text-[#06153a]">{template.name}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            The active MoDeck-connected production path for quote graphics, packages, platform copy, and archive metadata.
+            Use this connected workflow to turn a quote into reviewed files, platform copy, and archive-ready metadata.
           </p>
         </div>
         <StatusPill label={template.status} tone="success" />
@@ -108,7 +108,7 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
 
       <div className="mt-5 border-t border-slate-100 pt-4">
         <PrimaryActionButton href={template.useHref} className="sm:min-w-40">
-          Use Template
+          Use Quote Card
         </PrimaryActionButton>
       </div>
     </article>
@@ -121,7 +121,7 @@ function FactorySummary() {
       <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Template Factory</p>
       <h2 className="mt-1 text-xl font-semibold text-[#06153a]">Repeatable media packages</h2>
       <p className="mt-3 text-sm leading-6">
-        Pick a template, validate the preview, generate outputs, then leave with downloads, platform copy,
+        Browse the factory, pick the connected template, validate the preview, then leave with downloads, platform copy,
         and archive-ready metadata.
       </p>
       <div className="mt-4 grid gap-2 text-sm font-semibold">

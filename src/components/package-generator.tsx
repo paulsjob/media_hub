@@ -160,7 +160,7 @@ export function PackageGenerator({
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] xl:items-start">
         <div className="space-y-4">
-          <SectionCard title="Package Outputs" className="p-4">
+          <SectionCard title="Select Package Outputs" className="p-4">
             <OutputSelector
               outputs={outputs}
               selectedIds={selectedIds}
@@ -169,7 +169,7 @@ export function PackageGenerator({
             />
           </SectionCard>
 
-          <SectionCard title="Required Fields">
+          <SectionCard title="Required Quote Card Fields">
             <div className="grid gap-4">
               {template.required_fields.map((fieldName) => {
                 const key = fieldMap[fieldName] ?? "quote";
@@ -188,7 +188,7 @@ export function PackageGenerator({
         </div>
 
         <div className="space-y-4">
-          <SectionCard title="Preview">
+          <SectionCard title="Live Package Preview">
             <PreviewGrid
               outputs={outputs}
               selectedOutputIds={selectedIds}
@@ -201,15 +201,15 @@ export function PackageGenerator({
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-[#06153a]">Approve the live preview before choosing final package outputs.</p>
+                <p className="font-semibold text-[#06153a]">Preview looks right? Approve it to unlock package generation.</p>
               </div>
               {outputsOpen ? (
                 <span className="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800">
-                  Preview approved
+                  Preview approved. Package actions unlocked.
                 </span>
               ) : (
                 <ButtonLike variant="primary" onClick={() => setOutputsOpen(true)} className="shrink-0">
-                  Preview Approved
+                  Approve Preview
                 </ButtonLike>
               )}
             </div>
@@ -219,7 +219,7 @@ export function PackageGenerator({
 
       {outputsOpen ? (
         <>
-          <SectionCard title="Package Summary">
+          <SectionCard title="Ready to Generate">
             <div className="flex flex-wrap gap-2">
               {outputs
                 .filter((output) => selectedIds.includes(output.id))
@@ -241,7 +241,7 @@ export function PackageGenerator({
               onClick={generatePackage}
               disabled={selectedIds.length === 0 || isGenerating}
             >
-              {isGenerating ? "Generating package..." : "Generate Package"}
+              {isGenerating ? "Generating package..." : "Generate Review Package"}
             </ButtonLike>
           </div>
         </>

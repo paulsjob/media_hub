@@ -8,12 +8,12 @@ import {
 } from "@/components/ui";
 
 const workingFlow = [
-  "Choose template",
-  "Fill structured fields",
-  "Approve preview",
-  "Generate package",
+  "Choose a connected template",
+  "Fill the structured content fields",
+  "Approve the live preview",
+  "Generate the package",
   "Review files, metadata, and platform copy",
-  "Download or create another version",
+  "Download ready files or create another version",
 ];
 
 const templateStatuses = [
@@ -29,10 +29,10 @@ export default function HomePage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="MVP Status / Media Operations"
+        eyebrow="Media Operations Command Center"
         title="Media"
         accent="Lab"
-        subtitle="Generate, review, package, and reuse campaign-ready media assets."
+        subtitle="Generate, review, package, and reuse campaign-ready media assets from one repeatable workflow."
         actions={
           <>
             <PrimaryActionButton href="/templates">Browse Templates</PrimaryActionButton>
@@ -42,7 +42,7 @@ export default function HomePage() {
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <SectionCard title="Working Flow">
+        <SectionCard title="Current MVP Flow">
           <div className="grid gap-3">
             {workingFlow.map((step, index) => (
               <div key={step} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
@@ -56,7 +56,7 @@ export default function HomePage() {
         </SectionCard>
 
         <div className="grid gap-5">
-          <SectionCard title="Today's Factory Status">
+          <SectionCard title="Demo Factory Status">
             <div className="grid gap-3 sm:grid-cols-2">
               <DashboardMetric label="Connected templates" value="1" />
               <DashboardMetric label="Planned templates" value="5" />

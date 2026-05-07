@@ -35,7 +35,7 @@ export default async function GeneratePage({
             Quote Card Package Generator
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Enter the approved message, validate the live MoDeck preview, choose outputs, and generate the package.
+            Select package outputs, fill the quote card fields, approve the preview, and generate a reviewable package.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">

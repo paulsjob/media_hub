@@ -184,7 +184,7 @@ export function PackageResults({
 
       <PlatformCopyCard packageContext={packageContext} />
 
-      <SectionCard title="Download Package">
+      <SectionCard title="Download Ready Files">
         <DownloadAllPackage
           packageName={packageName}
           files={readyDownloads}
@@ -194,7 +194,7 @@ export function PackageResults({
         />
       </SectionCard>
 
-      <SectionCard title="Stills">
+      <SectionCard title="Selected Stills">
         <div className="space-y-3">
           {stills.length > 0 ? (
             stills.map((output) => (
@@ -217,7 +217,7 @@ export function PackageResults({
         </div>
       </SectionCard>
 
-      <SectionCard title="Videos">
+      <SectionCard title="Selected Videos">
         <div className="space-y-3">
           {videos.length > 0 ? (
             videos.map((output) => (
@@ -287,7 +287,7 @@ function PackageReviewHeader({
             </span>
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Review package context, confirm output readiness, and download the files currently available.
+            Review the generated package, copy publishing text, download ready files, or start another version from the same inputs.
           </p>
         </div>
         <div className="grid gap-3 sm:min-w-56">
@@ -350,6 +350,9 @@ function PlatformCopyCard({
 
   return (
     <SectionCard title="Platform Copy">
+      <p className="mb-4 text-sm leading-6 text-slate-600">
+        Copy deterministic captions and accessibility text for the package without leaving the review screen.
+      </p>
       <div className="space-y-3">
         {copyBlocks.map((block) => (
           <div
@@ -411,6 +414,9 @@ function ArchiveMetadataCard({
 
   return (
     <SectionCard title="Archive Metadata">
+      <p className="mb-4 text-sm leading-6 text-slate-600">
+        Demo metadata for future search, reuse, and tracking. Nothing is saved yet.
+      </p>
       <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
         <div className="grid gap-3 sm:grid-cols-2">
           <MetadataValue label="Package Type" value={metadata.packageType} />
