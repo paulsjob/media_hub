@@ -237,8 +237,9 @@ function DownloadAllPackage({
   const [downloaded, setDownloaded] = useState(false);
   const readyCount = files.length;
   const disabled = readyCount === 0 || isDownloading;
-  const allOutputsReady = readyCount === totalOutputs && files.every((file) => file.source !== "mock-placeholder");
-  const buttonLabel = allOutputsReady ? "Download All Package" : "Download All Ready Files";
+  const includesPlaceholders = files.some((file) => file.source === "mock-placeholder");
+  const allOutputsReady = readyCount === totalOutputs && !includesPlaceholders;
+  const buttonLabel = downloaded ? "Downloaded ZIP" : allOutputsReady ? "Download All Package" : "Download Ready Files";
 
   async function downloadAll() {
     if (disabled) {
@@ -286,14 +287,13 @@ function DownloadAllPackage({
             : "No package files ready yet"}
         </p>
         <p className="mt-1 text-sm text-slate-600">
-          {downloaded
-            ? files.length > 1
-              ? "Downloaded ZIP."
-              : "Package downloaded."
-            : readyCount > 0
-            ? "Download all currently ready outputs. Rendering or failed files are skipped."
+          {readyCount > 0
+            ? includesPlaceholders
+              ? "Includes ready files and placeholders currently available for download."
+              : "Download all currently ready final outputs. Rendering or failed files are skipped."
             : "Download All will activate when at least one output is ready."}
         </p>
+        {downloaded ? <p className="mt-2 text-sm font-semibold text-emerald-800">Package downloaded.</p> : null}
       </div>
       <button
         type="button"
@@ -324,7 +324,7 @@ function DeliveryOutputCard({
   const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
   const state = getDeliveryState(result);
   const canDownload = Boolean(resolvedDownloadUrl) && (result?.source !== "modeck-render" || result.status === "completed");
-  const showProgress = result?.source === "modeck-render" && ["queued", "rendering", "completed"].includes(result.status ?? "");
+  const showProgress = result?.source === "modeck-render" && ["queued", "rendering"].includes(result.status ?? "");
 
   async function downloadFile() {
     if (!canDownload) {
@@ -336,7 +336,11 @@ function DeliveryOutputCard({
   }
 
   return (
-    <div className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[150px_1fr_auto] md:items-center">
+    <div
+      className={`grid gap-4 rounded-lg border bg-white p-4 md:grid-cols-[150px_1fr_auto] md:items-center ${
+        downloaded ? "border-emerald-300 ring-1 ring-emerald-100" : "border-slate-200"
+      }`}
+    >
       <OutputThumbnail output={output} source={result?.source} state={state} />
       <div>
         <div className="flex flex-wrap items-center gap-2">
@@ -364,18 +368,14 @@ function DeliveryOutputCard({
             <button
               type="button"
               onClick={downloadFile}
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+              className={`inline-flex min-h-10 items-center justify-center rounded-md border px-4 text-sm font-semibold ${
+                downloaded
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                  : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
+              }`}
             >
-              {downloaded ? "Downloaded" : "Download"}
+              {downloaded ? "OK Downloaded" : "Download"}
             </button>
-            <a
-              href={resolvedDownloadUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm font-semibold text-blue-700 hover:text-blue-900"
-            >
-              Open preview
-            </a>
           </>
         ) : (
           <span className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-500">
