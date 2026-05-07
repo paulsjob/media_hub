@@ -1,5 +1,5 @@
 import { PackageGenerator } from "@/components/package-generator";
-import { MvpShell } from "@/components/ui";
+import { MvpShell, SecondaryButton } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
 import type { PreviewContent } from "@/lib/preview-state";
 
@@ -21,20 +21,36 @@ export default async function GeneratePage({
   const view = mediaLab.getAssetPackageView(preview.packageDraft.id);
   const initialContent = getInitialContent(params);
   const initialSelectedIds = getInitialSelectedIds(params.size);
+  const startedFromPreviewTest = hasPreviewTestParams(params);
 
   return (
     <MvpShell>
-      <div className="mb-8">
+      <div className="mb-8 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
         <div>
-          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-blue-700">Quote Card</p>
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-blue-700">
+            Production / Quote Card
+          </p>
           <h1 className="text-3xl font-semibold tracking-tight text-[#06153a] md:text-4xl">
-            Fill the fields and choose your outputs.
+            Quote Card Package Generator
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Preview the active source render with MoDeck, then generate the selected stills and videos.
+            Enter the approved message, validate the live MoDeck preview, choose outputs, and generate the package.
           </p>
         </div>
+        <div className="flex flex-wrap gap-3">
+          <SecondaryButton href="/templates">Change Template</SecondaryButton>
+          <SecondaryButton href="/dev/modeck-preview-test">Open Dev Preview Harness</SecondaryButton>
+        </div>
       </div>
+
+      {startedFromPreviewTest ? (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+          <p className="font-semibold">Started from MoDeck Preview/Test</p>
+          <p className="mt-1">
+            Template: {preview.template.name} {preview.template.version} / Status: Active / MoDeck: Connected
+          </p>
+        </div>
+      ) : null}
 
       <PackageGenerator
         template={preview.template}
@@ -79,4 +95,24 @@ function getInitialSelectedIds(size?: string) {
   const outputId = size ? outputIdBySize[size] : undefined;
 
   return outputId ? [outputId] : undefined;
+}
+
+function hasPreviewTestParams(params: {
+  quote?: string;
+  speakerName?: string;
+  speakerTitle?: string;
+  contextLine?: string;
+  headshotFilename?: string;
+  size?: string;
+  frame?: string;
+}) {
+  return Boolean(
+    params.quote ??
+      params.speakerName ??
+      params.speakerTitle ??
+      params.contextLine ??
+      params.headshotFilename ??
+      params.size ??
+      params.frame,
+  );
 }
