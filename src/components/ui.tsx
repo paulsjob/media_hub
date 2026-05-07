@@ -522,7 +522,9 @@ export function DownloadRow({
   const isLiveModeckPreview = source === "modeck-preview";
   const isRenderable = !isLiveModeckRender || status === "completed";
   const fileKind = isLiveModeckRender
-    ? "Final MoDeck render"
+    ? output.type === "still"
+      ? "Final MoDeck PNG"
+      : "Final MoDeck video"
     : isLiveModeckPreview
       ? "Live MoDeck PNG"
       : `Placeholder ${output.type === "still" ? "SVG" : "MP4"}`;
@@ -558,7 +560,9 @@ export function DownloadRow({
             </div>
             <p className="mt-1 text-xs text-slate-500">
               {status === "completed"
-                ? "Final render ready"
+                ? output.type === "still"
+                  ? "PNG ready"
+                  : "Video ready"
                 : status === "failed" || status === "canceled"
                   ? errorMessage ?? "MoDeck render did not complete."
                   : `MoDeck render ${status ?? "queued"}...`}

@@ -2,7 +2,10 @@ import {
   getModeckApiConfig,
   isRecord,
   parseJsonObject,
+  slugify,
 } from "@/lib/modeck/quote-box-test";
+import { registerRenderDownload } from "@/lib/modeck/render-download-store";
+import { MVP_OUTPUT_FORMATS } from "@/lib/output-formats";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +73,11 @@ function normalizeRenderStatus(
   const render = findRenderRecord(response, editId) ?? response;
   const status = normalizeStatus(render?.code ?? render?.status ?? response?.status);
   const progress = normalizeProgress(render?.progress ?? response?.progress, status);
-  const downloadUrl = extractDownloadUrl(render) ?? extractDownloadUrl(response);
+  const sourceDownloadUrl = extractDownloadUrl(render) ?? extractDownloadUrl(response);
+  const downloadUrl =
+    status === "completed" && sourceDownloadUrl
+      ? createMediaLabDownloadUrl(editId, outputId, sourceDownloadUrl, render ?? response)
+      : null;
   const errorMessage = extractErrorMessage(render) ?? extractErrorMessage(response);
 
   return {
@@ -81,6 +88,27 @@ function normalizeRenderStatus(
     temporaryDownloadUrl: downloadUrl,
     errorMessage,
   };
+}
+
+function createMediaLabDownloadUrl(
+  editId: string,
+  outputId: string,
+  mediaUrl: string,
+  render: Record<string, unknown> | null,
+) {
+  const output = MVP_OUTPUT_FORMATS.find((format) => format.id === outputId);
+  const renderName = typeof render?.name === "string" ? render.name : "";
+  const fallbackBase = output
+    ? `quote-card-${output.id}`
+    : `quote-card-${outputId || "modeck-render"}`;
+  const token = registerRenderDownload({
+    editId,
+    outputId,
+    mediaUrl,
+    filenameBase: slugify(renderName || fallbackBase),
+  });
+
+  return `/api/modeck/render/download?token=${encodeURIComponent(token)}`;
 }
 
 function findRenderRecord(response: Record<string, unknown> | null, editId: string) {
