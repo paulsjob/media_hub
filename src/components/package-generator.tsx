@@ -94,14 +94,16 @@ export function PackageGenerator({
     const renderResults = await Promise.all(
       renderRequests.map((request) => mockModeckAdapter.requestRender(request)),
     );
-    const renderedOutputs = renderResults.map((result) => ({
-      outputId: result.outputId,
-      editId: result.editId,
-      temporaryDownloadUrl:
-        getLivePreviewDownloadUrl(result.outputId, outputs, content) ??
-        result.files[0]?.temporaryDownloadUrl ??
-        "",
-    }));
+    const renderedOutputs = renderResults.map((result) => {
+      const livePreviewDownloadUrl = getLivePreviewDownloadUrl(result.outputId, outputs, content);
+
+      return {
+        outputId: result.outputId,
+        editId: result.editId,
+        temporaryDownloadUrl: livePreviewDownloadUrl ?? result.files[0]?.temporaryDownloadUrl ?? "",
+        source: livePreviewDownloadUrl ? "modeck-preview" : "mock-placeholder",
+      };
+    });
     const params = new URLSearchParams({
       outputs: selectedIds.join(","),
       renders: encodeURIComponent(JSON.stringify(renderedOutputs)),

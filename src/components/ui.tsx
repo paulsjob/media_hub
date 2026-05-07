@@ -504,23 +504,33 @@ export function DownloadRow({
   output,
   editId,
   downloadUrl = "/package",
+  source = "mock-placeholder",
 }: {
   output: MvpOutputFormat;
   editId?: string;
   downloadUrl?: string;
+  source?: "modeck-preview" | "mock-placeholder";
 }) {
   const safeDownloadUrl = getSafeDownloadUrl(downloadUrl, editId, output.id);
+  const isLiveModeckPreview = source === "modeck-preview";
+  const fileKind = isLiveModeckPreview
+    ? "Live MoDeck PNG"
+    : `Placeholder ${output.type === "still" ? "SVG" : "MP4"}`;
 
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
       <div>
         <p className="font-semibold text-[#06153a]">
-          {output.type === "still" ? "Still" : "Video"} · {output.label}
+          {output.type === "still" ? "Still" : "Video"} - {output.label}
         </p>
         <p className="text-sm text-slate-500">
-          {output.aspectLabel} · Mock {output.type === "still" ? "PNG" : "MP4"}
+          {output.aspectLabel} - {fileKind}
         </p>
-        {editId ? <p className="mt-1 text-xs text-slate-400">Mock edit ID: {editId}</p> : null}
+        {editId ? (
+          <p className="mt-1 text-xs text-slate-400">
+            {isLiveModeckPreview ? "Preview render ID" : "Placeholder edit ID"}: {editId}
+          </p>
+        ) : null}
       </div>
       <SecondaryButton href={safeDownloadUrl} className="shrink-0">
         Download
