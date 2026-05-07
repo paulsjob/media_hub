@@ -49,6 +49,7 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
   const renderStatus = loading ? "requesting" : result?.ok ? "preview returned" : result?.status ?? "ready";
   const imageSrc = result?.imageBase64 ? toImageSrc(result.imageBase64) : null;
+  const generateHref = getGenerateHref(form);
 
   function updateField(key: keyof typeof defaults, value: string) {
     setForm((current) => ({
@@ -279,7 +280,7 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
                     Preview looks good? Continue to Generate Package.
                   </p>
                   <Link
-                    href="/generate"
+                    href={generateHref}
                     className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#12306a]"
                   >
                     Generate Package
@@ -359,4 +360,18 @@ function Field({
 
 function toImageSrc(value: string) {
   return value.startsWith("data:image") ? value : `data:image/png;base64,${value}`;
+}
+
+function getGenerateHref(form: ModeckPreviewTestProps["defaults"]) {
+  const params = new URLSearchParams({
+    quote: form.quote,
+    speakerName: form.speakerName,
+    speakerTitle: form.speakerTitle,
+    contextLine: form.contextLine,
+    headshotFilename: form.headshotFilename,
+    size: form.size,
+    frame: String(form.frame),
+  });
+
+  return `/generate?${params.toString()}`;
 }

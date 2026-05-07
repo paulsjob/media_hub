@@ -36,25 +36,29 @@ export function PackageGenerator({
   template,
   fields,
   outputs,
+  initialContent,
+  initialSelectedIds,
 }: {
   template: Template;
   fields: PackageField[];
   outputs: MvpOutputFormat[];
+  initialContent?: Partial<PreviewContent>;
+  initialSelectedIds?: string[];
 }) {
   const router = useRouter();
   const stills = outputs.filter((output) => output.type === "still");
   const videos = outputs.filter((output) => output.type === "video");
-  const [selectedIds, setSelectedIds] = useState<string[]>([
-    "still-1920x1080",
-    "still-1080x1080",
-    "video-1920x1080",
-  ]);
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    initialSelectedIds && initialSelectedIds.length > 0
+      ? initialSelectedIds
+      : ["still-1920x1080", "still-1080x1080", "video-1920x1080"],
+  );
   const [content, setContent] = useState<PreviewContent>(() => ({
-    quote: getFieldValue(fields, "Primary Quote"),
-    speakerName: getFieldValue(fields, "Speaker Name"),
-    speakerTitle: getFieldValue(fields, "Speaker Title"),
-    contextLine: getFieldValue(fields, "Context Line"),
-    headshot: getFieldValue(fields, "Headshot"),
+    quote: initialContent?.quote ?? getFieldValue(fields, "Primary Quote"),
+    speakerName: initialContent?.speakerName ?? getFieldValue(fields, "Speaker Name"),
+    speakerTitle: initialContent?.speakerTitle ?? getFieldValue(fields, "Speaker Title"),
+    contextLine: initialContent?.contextLine ?? getFieldValue(fields, "Context Line"),
+    headshot: initialContent?.headshot ?? getFieldValue(fields, "Headshot"),
   }));
   const [isGenerating, setIsGenerating] = useState(false);
 

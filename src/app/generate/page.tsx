@@ -1,10 +1,26 @@
 import { PackageGenerator } from "@/components/package-generator";
 import { MvpShell } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
+import type { PreviewContent } from "@/lib/preview-state";
 
-export default function GeneratePage() {
+export default async function GeneratePage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    quote?: string;
+    speakerName?: string;
+    speakerTitle?: string;
+    contextLine?: string;
+    headshotFilename?: string;
+    size?: string;
+    frame?: string;
+  }>;
+}) {
+  const params = await searchParams;
   const preview = mediaLab.previewQuoteCardPackage();
   const view = mediaLab.getAssetPackageView(preview.packageDraft.id);
+  const initialContent = getInitialContent(params);
+  const initialSelectedIds = getInitialSelectedIds(params.size);
 
   return (
     <MvpShell>
@@ -24,7 +40,43 @@ export default function GeneratePage() {
         template={preview.template}
         fields={view?.packageFields ?? []}
         outputs={mediaLab.getOutputFormats()}
+        initialContent={initialContent}
+        initialSelectedIds={initialSelectedIds}
       />
     </MvpShell>
   );
+}
+
+function getInitialContent(params: {
+  quote?: string;
+  speakerName?: string;
+  speakerTitle?: string;
+  contextLine?: string;
+  headshotFilename?: string;
+}): Partial<PreviewContent> | undefined {
+  const content = {
+    quote: params.quote,
+    speakerName: params.speakerName,
+    speakerTitle: params.speakerTitle,
+    contextLine: params.contextLine,
+    headshot: params.headshotFilename,
+  };
+  const entries = Object.entries(content).filter((entry): entry is [keyof PreviewContent, string] => {
+    const [, value] = entry;
+    return typeof value === "string";
+  });
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function getInitialSelectedIds(size?: string) {
+  const outputIdBySize: Record<string, string> = {
+    "1920x1080": "still-1920x1080",
+    "1080x1080": "still-1080x1080",
+    "1080x1350": "still-1080x1350",
+    "1080x1920": "still-1080x1920",
+  };
+  const outputId = size ? outputIdBySize[size] : undefined;
+
+  return outputId ? [outputId] : undefined;
 }
