@@ -60,6 +60,7 @@ export function PackageGenerator({
     contextLine: initialContent?.contextLine ?? getFieldValue(fields, "Context Line"),
     headshot: initialContent?.headshot ?? getFieldValue(fields, "Headshot"),
   }));
+  const [outputsOpen, setOutputsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const selectedRatios = useMemo(
@@ -144,60 +145,90 @@ export function PackageGenerator({
 
   return (
     <div className="space-y-6">
-      <SectionCard title="Required Fields">
-        <div className="grid gap-4">
-          {template.required_fields.map((fieldName) => {
-            const key = fieldMap[fieldName] ?? "quote";
-            return (
-              <GeneratorField
-                key={fieldName}
-                label={fieldName.replace("Primary ", "")}
-                value={content[key]}
-                textarea={fieldName === "Primary Quote"}
-                onChange={(value) => updateContent(key, value)}
-              />
-            );
-          })}
-        </div>
-      </SectionCard>
+      <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] xl:items-start">
+        <SectionCard title="Required Fields">
+          <div className="grid gap-4">
+            {template.required_fields.map((fieldName) => {
+              const key = fieldMap[fieldName] ?? "quote";
+              return (
+                <GeneratorField
+                  key={fieldName}
+                  label={fieldName.replace("Primary ", "")}
+                  value={content[key]}
+                  textarea={fieldName === "Primary Quote"}
+                  onChange={(value) => updateContent(key, value)}
+                />
+              );
+            })}
+          </div>
+        </SectionCard>
 
-      <SectionCard title="Live MoDeck Preview">
-        <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-[#06153a]">Validate the current fields before package generation.</p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            The active 16:9 source preview renders through MoDeck when available. Other selected ratios continue to
-            use the local layout preview until their MoDeck templates are connected.
-          </p>
-        </div>
-        <PreviewGrid ratios={selectedRatios} content={content} />
-      </SectionCard>
+        <div className="space-y-4">
+          <SectionCard title="Live MoDeck Preview">
+            <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-[#06153a]">
+                Validate the current fields before package generation.
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                The active 16:9 source preview renders through MoDeck when available. Other selected ratios continue to
+                use the local layout preview until their MoDeck templates are connected.
+              </p>
+            </div>
+            <PreviewGrid ratios={selectedRatios} content={content} />
+          </SectionCard>
 
-      <SectionCard title="Choose Outputs">
-        <div className="mb-5 flex flex-wrap gap-2">
-          <ButtonLike disabled>{selectedIds.length} selected</ButtonLike>
-          <ButtonLike onClick={() => selectByType("still")}>Select All Stills</ButtonLike>
-          <ButtonLike onClick={() => selectByType("video")}>Select All Videos</ButtonLike>
-          <ButtonLike onClick={() => setSelectedIds(outputs.map((output) => output.id))}>
-            Select All Outputs
-          </ButtonLike>
-          <ButtonLike onClick={() => setSelectedIds([])}>Clear All</ButtonLike>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-[#06153a]">Approve the live preview before choosing final package outputs.</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Once the preview matches the current fields, continue to output selection and package generation.
+                </p>
+              </div>
+              {outputsOpen ? (
+                <span className="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800">
+                  Preview approved
+                </span>
+              ) : (
+                <ButtonLike variant="primary" onClick={() => setOutputsOpen(true)} className="shrink-0">
+                  Preview Approved
+                </ButtonLike>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="space-y-6">
-          <OutputGroup title="Stills" outputs={stills} selectedIds={selectedIds} onToggle={toggleOutput} />
-          <OutputGroup title="Videos" outputs={videos} selectedIds={selectedIds} onToggle={toggleOutput} />
-        </div>
-      </SectionCard>
-
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <SecondaryButton href="/templates">Change Template</SecondaryButton>
-        <ButtonLike
-          variant="primary"
-          onClick={generatePackage}
-          disabled={selectedIds.length === 0 || isGenerating}
-        >
-          {isGenerating ? "Generating package..." : "Generate Package"}
-        </ButtonLike>
       </div>
+
+      {outputsOpen ? (
+        <>
+          <SectionCard title="Choose Outputs">
+            <div className="mb-5 flex flex-wrap gap-2">
+              <ButtonLike disabled>{selectedIds.length} selected</ButtonLike>
+              <ButtonLike onClick={() => selectByType("still")}>Select All Stills</ButtonLike>
+              <ButtonLike onClick={() => selectByType("video")}>Select All Videos</ButtonLike>
+              <ButtonLike onClick={() => setSelectedIds(outputs.map((output) => output.id))}>
+                Select All Outputs
+              </ButtonLike>
+              <ButtonLike onClick={() => setSelectedIds([])}>Clear All</ButtonLike>
+            </div>
+            <div className="space-y-6">
+              <OutputGroup title="Stills" outputs={stills} selectedIds={selectedIds} onToggle={toggleOutput} />
+              <OutputGroup title="Videos" outputs={videos} selectedIds={selectedIds} onToggle={toggleOutput} />
+            </div>
+          </SectionCard>
+
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+            <SecondaryButton href="/templates">Change Template</SecondaryButton>
+            <ButtonLike
+              variant="primary"
+              onClick={generatePackage}
+              disabled={selectedIds.length === 0 || isGenerating}
+            >
+              {isGenerating ? "Generating package..." : "Generate Package"}
+            </ButtonLike>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
