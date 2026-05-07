@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 interface ModeckPreviewTestProps {
@@ -272,6 +273,19 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
                 )}
                 </div>
               </div>
+              {result?.ok ? (
+                <div className="mt-4 flex flex-col gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-medium text-emerald-950">
+                    Preview looks good? Continue to Generate Package.
+                  </p>
+                  <Link
+                    href="/generate"
+                    className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#12306a]"
+                  >
+                    Generate Package
+                  </Link>
+                </div>
+              ) : null}
             </section>
 
             <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

@@ -215,19 +215,23 @@ export function NavItem({
       aria-current={active ? "page" : undefined}
       className={`flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition ${focusState} ${
         active
-          ? "bg-white text-[#06153a] shadow-sm"
+          ? "bg-white !text-[#06153a] shadow-sm"
           : "text-white/78 hover:bg-white/8 hover:text-white"
       }`}
+      style={active ? { color: "#06153a" } : undefined}
     >
       <span
         className={`grid h-7 w-8 shrink-0 place-items-center rounded border text-[11px] font-semibold ${
-          active ? "border-slate-300 bg-slate-50 text-[#06153a]" : "border-white/15 text-white/80"
+          active ? "border-slate-300 bg-slate-50 !text-[#06153a]" : "border-white/15 text-white/80"
         }`}
+        style={active ? { color: "#06153a" } : undefined}
         aria-hidden="true"
       >
         {icon}
       </span>
-      <span className="min-w-0 flex-1 whitespace-nowrap">{label}</span>
+      <span className={active ? "min-w-0 flex-1 whitespace-nowrap !text-[#06153a]" : "min-w-0 flex-1 whitespace-nowrap"}>
+        {label}
+      </span>
       {count ? (
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
