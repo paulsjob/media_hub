@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { SectionCard } from "@/components/ui";
+import { SecondaryButton, SectionCard } from "@/components/ui";
 import type { MvpOutputFormat } from "@/lib/output-formats";
 
 export interface PackageRenderResult {
@@ -29,16 +29,38 @@ export function PackageResults({
   videos,
   initialRenderResults,
   packageName,
+  packageContext,
+  changeOutputsHref,
 }: {
   stills: MvpOutputFormat[];
   videos: MvpOutputFormat[];
   initialRenderResults: Record<string, PackageRenderResult>;
   packageName: string;
+  packageContext: {
+    quote?: string;
+    speakerName?: string;
+    speakerTitle?: string;
+    contextLine?: string;
+    previewApproved: boolean;
+  };
+  changeOutputsHref: string;
 }) {
   const [renderResults, setRenderResults] = useState(initialRenderResults);
   const [downloadedOutputIds, setDownloadedOutputIds] = useState<string[]>([]);
+  const [packageDownloaded, setPackageDownloaded] = useState(false);
   const outputs = useMemo(() => [...stills, ...videos], [stills, videos]);
   const resultList = useMemo(() => Object.values(renderResults), [renderResults]);
+  const deliveryItems = useMemo(
+    () =>
+      outputs.map((output) => ({
+        output,
+        result: renderResults[output.id],
+        state: getDeliveryState(renderResults[output.id]),
+      })),
+    [outputs, renderResults],
+  );
+  const readyFileCount = deliveryItems.filter((item) => item.state === "Ready").length;
+  const placeholderFileCount = deliveryItems.filter((item) => item.state === "Placeholder").length;
   const readyDownloads = useMemo(
     () =>
       outputs
@@ -65,15 +87,6 @@ export function PackageResults({
           } => Boolean(item),
         ),
     [outputs, packageName, renderResults],
-  );
-  const hasLiveModeckOutput = resultList.some(
-    (result) => result.source === "modeck-preview" || result.source === "modeck-render",
-  );
-  const hasFinalRenderJob = resultList.some((result) => result.source === "modeck-render");
-  const hasPendingFinalRender = resultList.some(
-    (result) =>
-      result.source === "modeck-render" &&
-      !["completed", "failed", "canceled"].includes(result.status ?? ""),
   );
   const pendingModeckRenders = useMemo(
     () =>
@@ -148,26 +161,24 @@ export function PackageResults({
 
   return (
     <>
-      <section className="mx-auto mb-3 max-w-3xl text-center">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-700">
-          {hasFinalRenderJob
-            ? "MoDeck Render Package"
-            : hasLiveModeckOutput
-              ? "MoDeck Preview Package Ready"
-              : "Package Ready"}
-        </p>
-        <h1 className="text-4xl font-semibold tracking-tight text-[#06153a]">
-          {hasPendingFinalRender ? "Your package is rendering." : "Your package is ready."}
-        </h1>
-        <p className="mt-4 text-lg leading-8 text-slate-600">
-          {hasPendingFinalRender
-            ? "The supported MoDeck output will update here when the final render is available."
-            : "Download the available files below. Live MoDeck outputs are labeled separately from placeholders."}
-        </p>
-      </section>
+      <PackageReviewHeader
+        packageContext={packageContext}
+        outputs={outputs}
+        readyFileCount={readyFileCount}
+        placeholderFileCount={placeholderFileCount}
+        packageGenerated={outputs.length > 0}
+        packageDownloaded={packageDownloaded}
+        changeOutputsHref={changeOutputsHref}
+      />
 
       <SectionCard title="Download Package">
-        <DownloadAllPackage packageName={packageName} files={readyDownloads} totalOutputs={outputs.length} />
+        <DownloadAllPackage
+          packageName={packageName}
+          files={readyDownloads}
+          totalOutputs={outputs.length}
+          downloaded={packageDownloaded}
+          onDownloaded={() => setPackageDownloaded(true)}
+        />
       </SectionCard>
 
       <SectionCard title="Stills">
@@ -219,10 +230,121 @@ export function PackageResults({
   );
 }
 
+function PackageReviewHeader({
+  packageContext,
+  outputs,
+  readyFileCount,
+  placeholderFileCount,
+  packageGenerated,
+  packageDownloaded,
+  changeOutputsHref,
+}: {
+  packageContext: {
+    quote?: string;
+    speakerName?: string;
+    speakerTitle?: string;
+    contextLine?: string;
+    previewApproved: boolean;
+  };
+  outputs: MvpOutputFormat[];
+  readyFileCount: number;
+  placeholderFileCount: number;
+  packageGenerated: boolean;
+  packageDownloaded: boolean;
+  changeOutputsHref: string;
+}) {
+  const requiredFieldsCompleted = Boolean(
+    packageContext.quote?.trim() &&
+      packageContext.speakerName?.trim() &&
+      packageContext.speakerTitle?.trim() &&
+      packageContext.contextLine?.trim(),
+  );
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-[#06153a]">Quote Card Package</h1>
+            <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+              Status: Ready for review
+            </span>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Review package context, confirm output readiness, and download the files currently available.
+          </p>
+        </div>
+        <SecondaryButton href={changeOutputsHref}>Change Outputs</SecondaryButton>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+          <SummaryValue label="Speaker" value={packageContext.speakerName} />
+          <SummaryValue label="Title" value={packageContext.speakerTitle} />
+          <SummaryValue label="Context" value={packageContext.contextLine} />
+          <SummaryValue label="Quote" value={packageContext.quote} />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <Metric label="Selected outputs" value={outputs.length} />
+          <Metric label="Ready files" value={readyFileCount} />
+          <Metric label="Placeholder files" value={placeholderFileCount} />
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-lg border border-slate-200 p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Review Checklist</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ChecklistItem checked={requiredFieldsCompleted} label="Required fields completed" />
+          <ChecklistItem checked={packageContext.previewApproved} label="Preview approved" />
+          <ChecklistItem checked={packageGenerated} label="Package generated" />
+          <ChecklistItem checked={packageDownloaded} label="Download ready files" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SummaryValue({ label, value }: { label: string; value?: string }) {
+  return (
+    <div>
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="font-medium leading-6 text-[#06153a]">{value?.trim() || "Not provided"}</p>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <p className="text-2xl font-semibold text-[#06153a]">{value}</p>
+      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+    </div>
+  );
+}
+
+function ChecklistItem({ checked, label }: { checked: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2 text-sm font-medium text-[#06153a]">
+      <span
+        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${
+          checked ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-slate-500"
+        }`}
+        aria-hidden="true"
+      >
+        {checked ? "\u2713" : "\u25CB"}
+      </span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 function DownloadAllPackage({
   packageName,
   files,
   totalOutputs,
+  downloaded,
+  onDownloaded,
 }: {
   packageName: string;
   files: Array<{
@@ -232,9 +354,10 @@ function DownloadAllPackage({
     source: PackageRenderResult["source"] | undefined;
   }>;
   totalOutputs: number;
+  downloaded: boolean;
+  onDownloaded: () => void;
 }) {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
   const readyCount = files.length;
   const disabled = readyCount === 0 || isDownloading;
   const includesPlaceholders = files.some((file) => file.source === "mock-placeholder");
@@ -251,7 +374,7 @@ function DownloadAllPackage({
     try {
       if (files.length === 1) {
         await downloadUrl(files[0].downloadUrl, files[0].filename);
-        setDownloaded(true);
+        onDownloaded();
         return;
       }
 
@@ -272,7 +395,7 @@ function DownloadAllPackage({
 
       const blob = await zip.generateAsync({ type: "blob" });
       downloadBlob(blob, `${packageName}.zip`);
-      setDownloaded(true);
+      onDownloaded();
     } finally {
       setIsDownloading(false);
     }

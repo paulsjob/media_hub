@@ -149,6 +149,7 @@ export function PackageGenerator({
       contextLine: content.contextLine,
       headshotFilename: content.headshot,
       outputs: selectedIds.join(","),
+      previewApproved: outputsOpen ? "1" : "0",
       renders: encodeURIComponent(JSON.stringify(renderedOutputs)),
     });
 
