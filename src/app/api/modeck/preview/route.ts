@@ -1,5 +1,3 @@
-import { mediaLabPayloadToModeckPreviewRequest } from "@/lib/modeck/modeck-mapping";
-
 export const dynamic = "force-dynamic";
 
 interface ModeckPreviewTestRequest {
@@ -12,6 +10,12 @@ interface ModeckPreviewTestRequest {
   speakerTitle: string;
   contextLine: string;
   headshotFilename: string;
+}
+
+interface ModeckPreviewOption {
+  name: string;
+  type: "text" | "multiline_text" | "media_replacement";
+  value: string | number;
 }
 
 export async function POST(request: Request) {
@@ -45,32 +49,96 @@ export async function POST(request: Request) {
     );
   }
 
-  const modeckRequest = mediaLabPayloadToModeckPreviewRequest({
-    templateId: "template-quote-card-v2",
-    packageName: "Dev MoDeck Preview Test",
-    fields: {
-      quote: body.quote ?? "",
-      speakerName: body.speakerName ?? "",
-      speakerTitle: body.speakerTitle ?? "",
-      contextLine: body.contextLine ?? "",
-      headshot: body.headshotFilename ?? "",
+  const templateName = body.deck?.trim() || "MoDeck Quote Box Test 002";
+  const mogrtName = body.mogrt?.trim() || "MoDeck Quote Box Test 002";
+  const headshotFilename = body.headshotFilename?.trim() ?? "";
+
+  const options: ModeckPreviewOption[] = [
+    {
+      name: "QUOTE_TEXT",
+      type: "multiline_text",
+      value: body.quote ?? "",
     },
-    selectedOutputIds: [size.outputId],
-    mediaReferences: {
-      headshot: body.headshotFilename ?? "",
-      headshotUploadedFilename: body.headshotFilename ?? "",
+    {
+      name: "SPEAKER_NAME",
+      type: "text",
+      value: body.speakerName ?? "",
     },
-    previewFrame: Number(body.frame ?? 0),
-  })[0];
+    {
+      name: "SPEAKER_TITLE",
+      type: "text",
+      value: body.speakerTitle ?? "",
+    },
+    {
+      name: "CONTEXT_LINE",
+      type: "text",
+      value: body.contextLine ?? "",
+    },
+    {
+      name: "BRAND",
+      type: "text",
+      value: 2,
+    },
+    {
+      name: "QUOTE_FONT_SIZE",
+      type: "text",
+      value: 75,
+    },
+    {
+      name: "QUOTE_LINE_SPACING",
+      type: "text",
+      value: -64,
+    },
+    {
+      name: "QUOTE_POSITION_X",
+      type: "text",
+      value: 200,
+    },
+    {
+      name: "QUOTE_POSITION_y",
+      type: "text",
+      value: 342,
+    },
+  ];
+
+  if (headshotFilename) {
+    options.push({
+      name: "HEADSHOT",
+      type: "media_replacement",
+      value: headshotFilename,
+    });
+  }
 
   const previewPayload = {
-    ...modeckRequest,
-    deckName: body.deck?.trim() || modeckRequest.deckName,
-    mogrtName: body.mogrt?.trim() || modeckRequest.mogrtName,
+    apiKey,
+    deck: templateName,
+    size: "",
+    frame: Number(body.frame ?? 0),
+    mogrt: {
+      name: mogrtName,
+      options: options.map(({ name, value }) => ({ name, value })),
+    },
+    template: templateName,
+    templateName,
+    deckName: templateName,
+    mogrtName,
+    templateId: "template-quote-card-v2",
+    packageName: "Dev MoDeck Preview Test",
+    ratio: size.ratio,
     width: size.width,
     height: size.height,
-    ratio: size.ratio,
-    previewFrame: Number(body.frame ?? modeckRequest.previewFrame),
+    previewFrame: Number(body.frame ?? 0),
+    options,
+    media: headshotFilename
+      ? [
+          {
+            fieldId: "headshot",
+            optionName: "HEADSHOT",
+            mediaLabReference: headshotFilename,
+            uploadedFilename: headshotFilename,
+          },
+        ]
+      : undefined,
   };
 
   try {
@@ -78,10 +146,11 @@ export async function POST(request: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: apiKey,
       },
       body: JSON.stringify(previewPayload),
     });
+
     const durationMs = Date.now() - startedAt;
     const responseText = await response.text();
     const responseJson = parseJson(responseText);
@@ -138,7 +207,6 @@ function parseSize(value: string) {
     width,
     height,
     ratio,
-    outputId: `still-${width}x${height}`,
   };
 }
 
@@ -175,30 +243,48 @@ function extractPreviewImage(response: Record<string, unknown> | null) {
     return null;
   }
 
+  const previewData = isRecord(response.previewData) ? response.previewData : null;
   const candidates = [
     response.imageBase64,
     response.previewImageBase64,
     response.previewBase64,
+    response.previewData,
+    previewData?.preview,
+    previewData?.image,
+    previewData?.imageBase64,
+    previewData?.previewImageBase64,
     response.image,
     response.preview,
+    response.base64,
+    response.data,
   ];
 
   return candidates.find((candidate): candidate is string => typeof candidate === "string") ?? null;
 }
 
 function summarizeRequest(payload: {
+  template?: string;
+  templateName?: string;
+  deck?: string;
   deckName: string;
+  mogrt?: string | { name?: string };
   mogrtName: string;
   width: number;
   height: number;
+  frame: number;
   previewFrame: number;
-  options: Array<{ name: string; value: string }>;
+  options: Array<{ name: string; value: string | number }>;
   media?: Array<{ optionName: string; uploadedFilename?: string; mediaLabReference: string }>;
 }) {
   return {
+    template: payload.template,
+    templateName: payload.templateName,
+    deck: payload.deck,
     deckName: payload.deckName,
+    mogrt: typeof payload.mogrt === "string" ? payload.mogrt : payload.mogrt?.name,
     mogrtName: payload.mogrtName,
     size: `${payload.width}x${payload.height}`,
+    frame: payload.frame,
     previewFrame: payload.previewFrame,
     options: payload.options.map((option) => option.name),
     media: payload.media?.map((item) => ({
@@ -214,18 +300,34 @@ function summarizeResponse(response: Record<string, unknown> | string | null) {
   }
 
   if (typeof response === "string") {
-    return response.slice(0, 500);
+    return response.slice(0, 1000);
   }
 
   return {
     keys: Object.keys(response),
+    success: response.success,
+    info: response.info,
+    message: response.message,
+    error: response.error,
     editId: response.editId,
     status: response.status,
     hasImage:
       typeof response.imageBase64 === "string" ||
       typeof response.previewImageBase64 === "string" ||
       typeof response.previewBase64 === "string" ||
+      typeof response.previewData === "string" ||
+      (isRecord(response.previewData) &&
+        (typeof response.previewData.preview === "string" ||
+          typeof response.previewData.image === "string" ||
+          typeof response.previewData.imageBase64 === "string" ||
+          typeof response.previewData.previewImageBase64 === "string")) ||
       typeof response.image === "string" ||
-      typeof response.preview === "string",
+      typeof response.preview === "string" ||
+      typeof response.base64 === "string" ||
+      typeof response.data === "string",
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
