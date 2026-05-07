@@ -1,116 +1,193 @@
 import { AppShell } from "@/components/app-shell";
 import {
-  Chip,
   PageHeader,
   PrimaryActionButton,
   SecondaryButton,
   SectionCard,
-  TemplateListItem,
 } from "@/components/ui";
-import { mediaLab } from "@/lib/media-lab-service";
+
+interface TemplateLibraryItem {
+  name: string;
+  bestFor: string[];
+  requiredFields: string[];
+  availableOutputs: string[];
+  status: "Active" | "Planned";
+  modeckStatus: "Connected" | "Not connected yet";
+  useHref?: string;
+  previewHref?: string;
+}
+
+const templateLibrary: TemplateLibraryItem[] = [
+  {
+    name: "Quote Card",
+    bestFor: ["Rapid response quotes", "Surrogate statements", "Press moments"],
+    requiredFields: ["Primary Quote", "Speaker Name", "Speaker Title", "Context Line"],
+    availableOutputs: ["16:9 still", "1:1 still", "4:5 still", "9:16 still", "16:9 video"],
+    status: "Active",
+    modeckStatus: "Connected",
+    useHref: "/generate",
+    previewHref: "/dev/modeck-preview-test",
+  },
+  {
+    name: "Stat Card",
+    bestFor: ["Single-number proof points", "Polling highlights", "Economic claims"],
+    requiredFields: ["Stat", "Stat Label", "Source", "Context Line"],
+    availableOutputs: ["16:9 still", "1:1 still", "4:5 still"],
+    status: "Planned",
+    modeckStatus: "Not connected yet",
+  },
+  {
+    name: "Contrast Card",
+    bestFor: ["Side-by-side comparisons", "Record contrasts", "Before and after framing"],
+    requiredFields: ["Left Label", "Left Claim", "Right Label", "Right Claim", "Source"],
+    availableOutputs: ["16:9 still", "1:1 still", "9:16 still"],
+    status: "Planned",
+    modeckStatus: "Not connected yet",
+  },
+  {
+    name: "What Happened / Why It Matters",
+    bestFor: ["Explainers", "Breaking-news context", "Issue education"],
+    requiredFields: ["What Happened", "Why It Matters", "Source", "Callout"],
+    availableOutputs: ["16:9 still", "4:5 still", "9:16 still", "Caption pack"],
+    status: "Planned",
+    modeckStatus: "Not connected yet",
+  },
+  {
+    name: "Localized Card",
+    bestFor: ["District-specific messaging", "Local proof points", "Geo-targeted social"],
+    requiredFields: ["Location", "Localized Claim", "Messenger", "Source"],
+    availableOutputs: ["1:1 still", "4:5 still", "9:16 still"],
+    status: "Planned",
+    modeckStatus: "Not connected yet",
+  },
+  {
+    name: "Clip Packaging Pack",
+    bestFor: ["Short video clips", "Captioned moments", "Platform-ready cutdowns"],
+    requiredFields: ["Clip File", "Headline", "Speaker", "Caption", "Source"],
+    availableOutputs: ["16:9 video", "1:1 video", "9:16 video", "Thumbnail still"],
+    status: "Planned",
+    modeckStatus: "Not connected yet",
+  },
+];
 
 export default function TemplatesPage() {
-  const templates = mediaLab.getTemplates();
-  const selectedTemplate = mediaLab.getTemplate("template-quote-card-v2") ?? templates[0];
-
   return (
     <AppShell>
       <PageHeader
         eyebrow="Media Operations / Template Library"
         title="Template"
         accent="Library"
-        subtitle="Start with the right format. Generate faster with proven structures."
+        subtitle="Choose the repeatable content package to build next."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
-        <div className="space-y-4">
-          <SectionCard title="Available Templates">
-            <div className="mb-4 flex flex-wrap gap-3">
-              <div className="flex h-10 min-w-72 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-500">
-                <span className="font-semibold text-[#06153a]">Search</span>
-                <span>Search templates</span>
-              </div>
-              {mediaLab.getTemplateFilters().map((tab) => (
-                <Chip key={tab} selected={tab === "All"}>
-                  {tab}
-                </Chip>
-              ))}
-            </div>
-            {templates.map((template) => (
-              <TemplateListItem key={template.id} template={template} />
-            ))}
-          </SectionCard>
-
-          <SectionCard title="Recently Used">
-            <div className="grid gap-3 md:grid-cols-3">
-              {templates.slice(0, 3).map((template) => (
-                <div key={template.id} className="rounded-md border border-slate-200 bg-white p-4">
-                  <p className="font-semibold text-[#06153a]">{template.name}</p>
-                  <p className="text-sm text-slate-500">used this week</p>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-        </div>
-
-        <SectionCard title="Template Details" className="self-start">
-          <div className="space-y-5">
-            <div className="flex gap-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-sm font-semibold text-[#06153a]">
-                QT
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-[#06153a]">{selectedTemplate.name}</h2>
-                <p className="text-slate-600">{selectedTemplate.description}</p>
-              </div>
-            </div>
-            <DetailList title="Best For" items={selectedTemplate.best_for} check />
-            <DetailList title="Requires" items={selectedTemplate.required_fields} />
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Outputs</p>
-              <div className="grid grid-cols-2 gap-2">
-                {selectedTemplate.available_outputs.map((output) => (
-                  <span
-                    key={output}
-                  className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm text-[#06153a]"
-                  >
-                    {output}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Performance Snapshot</p>
-              <div className="flex items-center justify-between py-1 text-sm">
-                <span>Avg engagement</span>
-                <span className="font-semibold text-emerald-700">+48%</span>
-              </div>
-              <div className="flex items-center justify-between py-1 text-sm">
-                <span>Avg build time</span>
-                <span className="font-semibold text-[#06153a]">4 min</span>
-              </div>
-            </div>
-            <PrimaryActionButton href="/generate">Use Template</PrimaryActionButton>
-            <SecondaryButton href="/templates">View Documentation</SecondaryButton>
-          </div>
-        </SectionCard>
+      <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+        Template Library is the entry point for repeatable content packages. Quote Card is currently the only
+        MoDeck-connected template.
       </div>
+
+      <SectionCard title="Internal Template Inventory">
+        <div className="grid gap-4 lg:grid-cols-2">
+          {templateLibrary.map((template) => (
+            <TemplateLibraryCard key={template.name} template={template} />
+          ))}
+        </div>
+      </SectionCard>
     </AppShell>
   );
 }
 
-function DetailList({ title, items, check = false }: { title: string; items: string[]; check?: boolean }) {
+function TemplateLibraryCard({ template }: { template: TemplateLibraryItem }) {
+  const isActive = template.status === "Active";
+
+  return (
+    <article className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-5">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Template</p>
+          <h2 className="mt-1 text-xl font-semibold text-[#06153a]">{template.name}</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <StatusPill label={template.status} tone={isActive ? "success" : "neutral"} />
+          <StatusPill
+            label={template.modeckStatus}
+            tone={template.modeckStatus === "Connected" ? "info" : "neutral"}
+          />
+        </div>
+      </div>
+
+      <div className="grid flex-1 gap-4 md:grid-cols-3">
+        <TemplateList title="Best For" items={template.bestFor} />
+        <TemplateList title="Required Fields" items={template.requiredFields} />
+        <TemplateList title="Available Outputs" items={template.availableOutputs} />
+      </div>
+
+      <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row">
+        {template.useHref ? (
+          <PrimaryActionButton href={template.useHref} className="sm:min-w-36">
+            Use Template
+          </PrimaryActionButton>
+        ) : (
+          <DisabledAction variant="primary">Use Template</DisabledAction>
+        )}
+        {template.previewHref ? (
+          <SecondaryButton href={template.previewHref} className="sm:min-w-36">
+            Preview/Test
+          </SecondaryButton>
+        ) : (
+          <DisabledAction>Preview/Test</DisabledAction>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function TemplateList({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
-      <div className="space-y-2">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <ul className="space-y-1.5 text-sm leading-5 text-slate-700">
         {items.map((item) => (
-          <div key={item} className="flex items-center gap-2 text-sm text-[#06153a]">
-            <span className={check ? "text-emerald-600" : "text-[#0b63f6]"}>{check ? "OK" : "-"}</span>
-            {item}
-          </div>
+          <li key={item}>{item}</li>
         ))}
-      </div>
+      </ul>
     </div>
+  );
+}
+
+function StatusPill({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "success" | "info" | "neutral";
+}) {
+  const toneClass = {
+    success: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+    info: "bg-blue-50 text-blue-800 ring-blue-200",
+    neutral: "bg-slate-100 text-slate-700 ring-slate-200",
+  }[tone];
+
+  return <span className={`rounded-md px-2 py-1 text-xs font-semibold ring-1 ${toneClass}`}>{label}</span>;
+}
+
+function DisabledAction({
+  children,
+  variant = "secondary",
+}: {
+  children: React.ReactNode;
+  variant?: "primary" | "secondary";
+}) {
+  const variantClass =
+    variant === "primary"
+      ? "bg-slate-300 text-white"
+      : "border border-slate-200 bg-slate-50 text-slate-400";
+
+  return (
+    <span
+      aria-disabled="true"
+      className={`inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-md px-4 text-sm font-semibold ${variantClass} sm:min-w-36`}
+    >
+      {children}
+    </span>
   );
 }
