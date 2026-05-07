@@ -151,3 +151,11 @@ Create or repair permissions for MoDeck's preview frame temp directory:
 mkdir "%USERPROFILE%\MoDeck Sync\_modk-data\Temp\preview-frames"
 icacls "%USERPROFILE%\MoDeck Sync" /grant "%USERNAME%:(OI)(CI)F" /T
 ```
+
+## K. Preview Speed vs Final Render Speed
+
+MoDeck preview is fast because `/preview` returns a still image payload directly, usually as `previewData`, `imageBase64`, or another base64 image field that MEDIA LAB can display immediately.
+
+Final still delivery currently uses the render-job path: `/render` starts an edit, `/renderstatus` polls until MoDeck exposes temporary media, and `/render/download` fetches that media and converts it to a PNG if needed. That job/status/download flow is more durable for final videos and future full render packages, but it is slower than direct preview image delivery for static stills.
+
+For static still outputs, a future fast path can likely use the preview base64 image as the downloadable still, with the render-job path kept as fallback or reserved for final video/source outputs. Do not remove render-job support without first confirming the preview endpoint returns production-quality dimensions for every still ratio.

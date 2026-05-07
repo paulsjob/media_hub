@@ -525,6 +525,16 @@ export function DownloadRow({
   const isLiveModeckRender = source === "modeck-render";
   const isLiveModeckPreview = source === "modeck-preview";
   const isRenderable = !isLiveModeckRender || status === "completed";
+  const deliveryState =
+    status === "failed" || status === "canceled"
+      ? "Failed"
+      : isLiveModeckRender
+        ? status === "completed"
+          ? "Ready"
+          : "Rendering"
+        : source === "mock-placeholder"
+          ? "Placeholder"
+          : "Ready";
   const fileKind = isLiveModeckRender
     ? output.type === "still"
       ? "Final MoDeck PNG"
@@ -536,9 +546,24 @@ export function DownloadRow({
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
       <div>
-        <p className="font-semibold text-[#06153a]">
-          {output.type === "still" ? "Still" : "Video"} - {output.label}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-semibold text-[#06153a]">
+            {output.type === "still" ? "Still" : "Video"} - {output.label}
+          </p>
+          <span
+            className={`rounded-md px-2 py-1 text-xs font-semibold ${
+              deliveryState === "Ready"
+                ? "bg-emerald-50 text-emerald-800"
+                : deliveryState === "Rendering"
+                  ? "bg-blue-50 text-blue-800"
+                  : deliveryState === "Failed"
+                    ? "bg-orange-50 text-orange-800"
+                    : "bg-slate-100 text-slate-700"
+            }`}
+          >
+            {deliveryState}
+          </span>
+        </div>
         <p className="text-sm text-slate-500">
           {output.aspectLabel} - {fileKind}
         </p>

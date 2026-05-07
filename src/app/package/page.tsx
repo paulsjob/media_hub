@@ -26,6 +26,7 @@ export default async function PackagePage({
   const videos = selectedOutputs.filter((output) => output.type === "video");
   const renderResults = parseRenderResults(renders);
   const backToGenerateHref = getBackToGenerateHref(params);
+  const packageFilename = getPackageFilename(params.speakerName);
 
   return (
     <MvpShell>
@@ -64,7 +65,12 @@ export default async function PackagePage({
           </div>
         </SectionCard>
 
-        <PackageResults stills={stills} videos={videos} initialRenderResults={renderResults} />
+        <PackageResults
+          stills={stills}
+          videos={videos}
+          initialRenderResults={renderResults}
+          packageName={packageFilename}
+        />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <SecondaryButton href={backToGenerateHref}>Back to Generate</SecondaryButton>
@@ -189,4 +195,17 @@ function getBackToGenerateHref(params: {
   const queryString = query.toString();
 
   return queryString ? `/generate?${queryString}` : "/generate";
+}
+
+function getPackageFilename(speakerName?: string) {
+  const speakerSlug = slugify(speakerName || "quote-card");
+
+  return `quote-card-${speakerSlug}-2026-package`;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
