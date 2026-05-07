@@ -27,6 +27,7 @@ export default async function PackagePage({
   const renderResults = parseRenderResults(renders);
   const backToGenerateHref = getBackToGenerateHref(params);
   const packageFilename = getPackageFilename(params.speakerName);
+  const generatedAt = new Date().toISOString();
 
   return (
     <MvpShell>
@@ -42,6 +43,7 @@ export default async function PackagePage({
             speakerTitle: params.speakerTitle,
             contextLine: params.contextLine,
             previewApproved: params.previewApproved === "1",
+            generatedAt,
           }}
           changeOutputsHref={backToGenerateHref}
         />

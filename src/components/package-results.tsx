@@ -42,6 +42,7 @@ export function PackageResults({
     speakerTitle?: string;
     contextLine?: string;
     previewApproved: boolean;
+    generatedAt: string;
   };
   changeOutputsHref: string;
 }) {
@@ -171,6 +172,13 @@ export function PackageResults({
         changeOutputsHref={changeOutputsHref}
       />
 
+      <ArchiveMetadataCard
+        packageContext={packageContext}
+        outputs={outputs}
+        readyFileCount={readyFileCount}
+        placeholderFileCount={placeholderFileCount}
+      />
+
       <SectionCard title="Download Package">
         <DownloadAllPackage
           packageName={packageName}
@@ -245,6 +253,7 @@ function PackageReviewHeader({
     speakerTitle?: string;
     contextLine?: string;
     previewApproved: boolean;
+    generatedAt: string;
   };
   outputs: MvpOutputFormat[];
   readyFileCount: number;
@@ -303,6 +312,216 @@ function PackageReviewHeader({
       </div>
     </section>
   );
+}
+
+function ArchiveMetadataCard({
+  packageContext,
+  outputs,
+  readyFileCount,
+  placeholderFileCount,
+}: {
+  packageContext: {
+    quote?: string;
+    speakerName?: string;
+    speakerTitle?: string;
+    contextLine?: string;
+    generatedAt: string;
+  };
+  outputs: MvpOutputFormat[];
+  readyFileCount: number;
+  placeholderFileCount: number;
+}) {
+  const [copiedKey, setCopiedKey] = useState<"packageId" | "filenameStem" | "metadata" | null>(null);
+  const metadata = useMemo(
+    () => getArchiveMetadata(packageContext, outputs, readyFileCount, placeholderFileCount),
+    [packageContext, outputs, readyFileCount, placeholderFileCount],
+  );
+  const selectedOutputText = metadata.selectedOutputs.length > 0 ? metadata.selectedOutputs.join(", ") : "Not provided";
+
+  async function copyValue(key: "packageId" | "filenameStem" | "metadata", value: string) {
+    await copyText(value);
+    setCopiedKey(key);
+    window.setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 1800);
+  }
+
+  return (
+    <SectionCard title="Archive Metadata">
+      <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MetadataValue label="Package Type" value={metadata.packageType} />
+          <MetadataValue label="Status" value={metadata.status} />
+          <MetadataValue label="Speaker" value={metadata.speaker} />
+          <MetadataValue label="Speaker Title" value={metadata.speakerTitle} />
+          <MetadataValue label="Context" value={metadata.context} className="sm:col-span-2" />
+          <MetadataValue label="Selected Outputs" value={selectedOutputText} className="sm:col-span-2" />
+          <MetadataValue label="Ready Files" value={String(metadata.readyFiles)} />
+          <MetadataValue label="Placeholder Files" value={String(metadata.placeholderFiles)} />
+          <MetadataValue label="Generated Date" value={metadata.generatedDate} className="sm:col-span-2" />
+          <MetadataValue label="Suggested Package ID" value={metadata.suggestedPackageId} className="sm:col-span-2" />
+          <MetadataValue label="Suggested Filename Stem" value={metadata.suggestedFilenameStem} className="sm:col-span-2" />
+          <MetadataValue label="Suggested Tags" value={metadata.suggestedTags.join(", ")} className="sm:col-span-2" />
+        </div>
+
+        <div className="flex min-w-48 flex-col gap-2">
+          <CopyButton
+            label={copiedKey === "packageId" ? "Copied Package ID" : "Copy Package ID"}
+            onClick={() => copyValue("packageId", metadata.suggestedPackageId)}
+          />
+          <CopyButton
+            label={copiedKey === "filenameStem" ? "Copied Filename Stem" : "Copy Filename Stem"}
+            onClick={() => copyValue("filenameStem", metadata.suggestedFilenameStem)}
+          />
+          <CopyButton
+            label={copiedKey === "metadata" ? "Copied Metadata JSON" : "Copy Metadata JSON"}
+            onClick={() => copyValue("metadata", JSON.stringify(metadata, null, 2))}
+          />
+          {copiedKey ? <p className="text-sm font-semibold text-emerald-800">Copied to clipboard.</p> : null}
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
+function MetadataValue({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="break-words font-medium leading-6 text-[#06153a]">{value.trim() || "Not provided"}</p>
+    </div>
+  );
+}
+
+function CopyButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+    >
+      {label}
+    </button>
+  );
+}
+
+function getArchiveMetadata(
+  packageContext: {
+    quote?: string;
+    speakerName?: string;
+    speakerTitle?: string;
+    contextLine?: string;
+    generatedAt: string;
+  },
+  outputs: MvpOutputFormat[],
+  readyFileCount: number,
+  placeholderFileCount: number,
+) {
+  const speakerSlug = toSlug(packageContext.speakerName, "not-provided");
+  const contextSlug = toSlug(packageContext.contextLine, "");
+  const dateStamp = getDateStamp(packageContext.generatedAt);
+  const selectedOutputs = outputs.map((output) => `${output.type === "video" ? "Video" : "Still"} ${output.label}`);
+  const suggestedPackageId = `quote-card-${dateStamp}-${speakerSlug}`;
+  const suggestedFilenameStem = contextSlug ? `quote-card-${speakerSlug}-${contextSlug}` : `quote-card-${speakerSlug}`;
+  const suggestedTags = uniqueValues([
+    "quote-card",
+    packageContext.speakerName ? speakerSlug : "",
+    ...getContextTags(packageContext.contextLine),
+    "ready-for-review",
+  ]);
+
+  return {
+    packageType: "Quote Card",
+    status: "Generated / Ready for review",
+    speaker: packageContext.speakerName?.trim() || "Not provided",
+    speakerTitle: packageContext.speakerTitle?.trim() || "Not provided",
+    context: packageContext.contextLine?.trim() || "Not provided",
+    selectedOutputs,
+    readyFiles: readyFileCount,
+    placeholderFiles: placeholderFileCount,
+    generatedDate: getGeneratedDateLabel(packageContext.generatedAt),
+    suggestedPackageId,
+    suggestedFilenameStem,
+    suggestedTags,
+  };
+}
+
+function getGeneratedDateLabel(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not provided";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function getDateStamp(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "date-not-provided";
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function getContextTags(value?: string) {
+  if (!value) {
+    return [];
+  }
+
+  const stopWords = new Set(["and", "for", "from", "into", "that", "the", "this", "with"]);
+
+  return uniqueValues(
+    value
+      .split(/\s+/)
+      .map((word) => toSlug(word, ""))
+      .filter((word) => word.length > 2 && !stopWords.has(word))
+      .slice(0, 4),
+  );
+}
+
+function uniqueValues(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function toSlug(value: string | undefined, fallback: string) {
+  return slugify(value ?? "") || fallback;
+}
+
+async function copyText(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+
+  textarea.value = value;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.append(textarea);
+  textarea.focus();
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
 }
 
 function SummaryValue({ label, value }: { label: string; value?: string }) {
