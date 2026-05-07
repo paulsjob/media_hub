@@ -505,17 +505,27 @@ export function DownloadRow({
   editId,
   downloadUrl = "/package",
   source = "mock-placeholder",
+  status,
+  progress,
+  errorMessage,
 }: {
   output: MvpOutputFormat;
   editId?: string;
   downloadUrl?: string;
-  source?: "modeck-preview" | "mock-placeholder";
+  source?: "modeck-render" | "modeck-preview" | "mock-placeholder";
+  status?: string;
+  progress?: number;
+  errorMessage?: string;
 }) {
   const safeDownloadUrl = getSafeDownloadUrl(downloadUrl, editId, output.id);
+  const isLiveModeckRender = source === "modeck-render";
   const isLiveModeckPreview = source === "modeck-preview";
-  const fileKind = isLiveModeckPreview
-    ? "Live MoDeck PNG"
-    : `Placeholder ${output.type === "still" ? "SVG" : "MP4"}`;
+  const isRenderable = !isLiveModeckRender || status === "completed";
+  const fileKind = isLiveModeckRender
+    ? "Final MoDeck render"
+    : isLiveModeckPreview
+      ? "Live MoDeck PNG"
+      : `Placeholder ${output.type === "still" ? "SVG" : "MP4"}`;
 
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -528,13 +538,45 @@ export function DownloadRow({
         </p>
         {editId ? (
           <p className="mt-1 text-xs text-slate-400">
-            {isLiveModeckPreview ? "Preview render ID" : "Placeholder edit ID"}: {editId}
+            {isLiveModeckRender
+              ? "MoDeck edit ID"
+              : isLiveModeckPreview
+                ? "Preview render ID"
+                : "Placeholder edit ID"}
+            : {editId}
           </p>
         ) : null}
+        {isLiveModeckRender ? (
+          <div className="mt-3 max-w-xs">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full rounded-full ${
+                  status === "failed" || status === "canceled" ? "bg-orange-500" : "bg-emerald-500"
+                }`}
+                style={{ width: `${Math.max(5, Math.min(100, progress ?? 5))}%` }}
+              />
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              {status === "completed"
+                ? "Final render ready"
+                : status === "failed" || status === "canceled"
+                  ? errorMessage ?? "MoDeck render did not complete."
+                  : `MoDeck render ${status ?? "queued"}...`}
+            </p>
+          </div>
+        ) : errorMessage ? (
+          <p className="mt-2 text-xs text-orange-700">{errorMessage}</p>
+        ) : null}
       </div>
-      <SecondaryButton href={safeDownloadUrl} className="shrink-0">
-        Download
-      </SecondaryButton>
+      {isRenderable && safeDownloadUrl ? (
+        <SecondaryButton href={safeDownloadUrl} className="shrink-0">
+          Download
+        </SecondaryButton>
+      ) : (
+        <span className="shrink-0 rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-500">
+          Rendering
+        </span>
+      )}
     </div>
   );
 }

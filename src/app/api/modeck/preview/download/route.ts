@@ -1,17 +1,21 @@
 import sharp from "sharp";
+import {
+  buildQuoteBoxOptions,
+  getModeckApiConfig,
+  isRecord,
+  MODECK_QUOTE_BOX_TEST_DECK,
+  MODECK_QUOTE_BOX_TEST_MOGRT,
+  parseJsonObject,
+  slugify,
+  type ModeckQuoteBoxOption,
+} from "@/lib/modeck/quote-box-test";
 
 export const dynamic = "force-dynamic";
 
-interface ModeckPreviewOption {
-  name: string;
-  value: string | number;
-}
-
 export async function GET(request: Request) {
-  const apiKey = process.env.MODECK_API_KEY;
-  const apiBaseUrl = process.env.MODECK_API_BASE_URL;
+  const config = getModeckApiConfig();
 
-  if (!apiKey || !apiBaseUrl) {
+  if (!config) {
     return Response.json(
       { error: "Live MoDeck preview is not configured." },
       { status: 503 },
@@ -28,26 +32,26 @@ export async function GET(request: Request) {
   };
 
   const previewPayload = {
-    apiKey,
-    deck: "MoDeck Quote Box Test 002",
+    apiKey: config.apiKey,
+    deck: MODECK_QUOTE_BOX_TEST_DECK,
     size: "",
     frame: 0,
     mogrt: {
-      name: "MoDeck Quote Box Test 002",
+      name: MODECK_QUOTE_BOX_TEST_MOGRT,
       options: buildOptions(fields),
     },
   };
 
-  const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/preview`, {
+  const response = await fetch(`${config.apiBaseUrl}/preview`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: apiKey,
+      Authorization: config.apiKey,
     },
     body: JSON.stringify(previewPayload),
   });
   const responseText = await response.text();
-  const responseJson = parseJson(responseText);
+  const responseJson = parseJsonObject(responseText);
   const imageBase64 = extractPreviewImage(responseJson);
 
   if (!response.ok || !imageBase64) {
@@ -77,26 +81,8 @@ function buildOptions(fields: {
   speakerName: string;
   speakerTitle: string;
   contextLine: string;
-}): ModeckPreviewOption[] {
-  return [
-    { name: "QUOTE_TEXT", value: fields.quote },
-    { name: "SPEAKER_NAME", value: fields.speakerName },
-    { name: "SPEAKER_TITLE", value: fields.speakerTitle },
-    { name: "CONTEXT_LINE", value: fields.contextLine },
-    { name: "BRAND", value: 2 },
-    { name: "QUOTE_FONT_SIZE", value: 75 },
-    { name: "QUOTE_LINE_SPACING", value: -64 },
-    { name: "QUOTE_POSITION_X", value: 200 },
-    { name: "QUOTE_POSITION_y", value: 342 },
-  ];
-}
-
-function parseJson(value: string) {
-  try {
-    return JSON.parse(value) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+}): ModeckQuoteBoxOption[] {
+  return buildQuoteBoxOptions(fields);
 }
 
 function extractPreviewImage(response: Record<string, unknown> | null) {
@@ -131,15 +117,4 @@ function dataUrlToBuffer(value: string) {
   }
 
   return Buffer.from(base64, "base64");
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 }

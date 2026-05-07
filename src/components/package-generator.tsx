@@ -23,6 +23,15 @@ const fieldMap: Record<string, keyof PreviewContent> = {
   Headshot: "headshot",
 } satisfies Record<string, keyof PreviewContent>;
 
+interface RenderStartResult {
+  ok: boolean;
+  outputId?: string;
+  editId?: string;
+  status?: string;
+  source?: "modeck-render";
+  error?: string;
+}
+
 export function PackageGenerator({
   template,
   fields,
@@ -94,14 +103,31 @@ export function PackageGenerator({
     const renderResults = await Promise.all(
       renderRequests.map((request) => mockModeckAdapter.requestRender(request)),
     );
+    const liveRenderResult = selectedIds.includes("still-1920x1080")
+      ? await startLiveModeckRender(content)
+      : null;
     const renderedOutputs = renderResults.map((result) => {
       const livePreviewDownloadUrl = getLivePreviewDownloadUrl(result.outputId, outputs, content);
+
+      if (result.outputId === "still-1920x1080" && liveRenderResult?.ok && liveRenderResult.editId) {
+        return {
+          outputId: result.outputId,
+          editId: liveRenderResult.editId,
+          temporaryDownloadUrl: "",
+          source: "modeck-render",
+          status: liveRenderResult.status ?? "queued",
+        };
+      }
 
       return {
         outputId: result.outputId,
         editId: result.editId,
         temporaryDownloadUrl: livePreviewDownloadUrl ?? result.files[0]?.temporaryDownloadUrl ?? "",
         source: livePreviewDownloadUrl ? "modeck-preview" : "mock-placeholder",
+        errorMessage:
+          result.outputId === "still-1920x1080" && liveRenderResult && !liveRenderResult.ok
+            ? liveRenderResult.error
+            : undefined,
       };
     });
     const params = new URLSearchParams({
@@ -163,6 +189,31 @@ export function PackageGenerator({
       </div>
     </div>
   );
+}
+
+async function startLiveModeckRender(content: PreviewContent): Promise<RenderStartResult> {
+  try {
+    const response = await fetch("/api/modeck/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        outputId: "still-1920x1080",
+        size: "1920x1080",
+        quote: content.quote,
+        speakerName: content.speakerName,
+        speakerTitle: content.speakerTitle,
+        contextLine: content.contextLine,
+      }),
+    });
+    const data = (await response.json()) as RenderStartResult;
+
+    return response.ok ? data : { ...data, ok: false };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "MoDeck render request failed.",
+    };
+  }
 }
 
 function GeneratorField({
