@@ -227,7 +227,7 @@ export function PreviewGrid({
       {activeRatio ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-            <span className="text-sm font-semibold text-[#06153a]">{activeOption.label}</span>
+            <span className="text-sm font-semibold text-[#06153a]">{getActiveFormatLabel(activeOption.output)}</span>
             {hasMultipleRatios ? (
               <div className="flex items-center gap-2">
                 <button
@@ -402,4 +402,8 @@ function outputToPreviewOption(output: MvpOutputFormat) {
       outputIds: [output.id],
     } satisfies PreviewRatio,
   };
+}
+
+function getActiveFormatLabel(output: MvpOutputFormat) {
+  return `${output.label} · ${output.aspectLabel} · ${output.type === "video" ? "Video" : "Still"}`;
 }

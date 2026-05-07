@@ -45,8 +45,6 @@ export function PackageGenerator({
   initialSelectedIds?: string[];
 }) {
   const router = useRouter();
-  const stills = outputs.filter((output) => output.type === "still");
-  const videos = outputs.filter((output) => output.type === "video");
   const defaultSelectedIds =
     initialSelectedIds && initialSelectedIds.length > 0
       ? initialSelectedIds
@@ -84,13 +82,6 @@ export function PackageGenerator({
 
       return next;
     });
-  }
-
-  function selectByType(type: MvpOutputFormat["type"]) {
-    const next = outputs.filter((output) => output.type === type).map((output) => output.id);
-
-    setSelectedIds(next);
-    setActiveOutputId(next[0] ?? "");
   }
 
   function updateContent(key: keyof PreviewContent, value: string) {
@@ -162,6 +153,15 @@ export function PackageGenerator({
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] xl:items-start">
         <div className="space-y-4">
+          <SectionCard title="Package Outputs">
+            <OutputSelector
+              outputs={outputs}
+              selectedIds={selectedIds}
+              activeOutputId={activeOutputId}
+              onToggle={toggleOutput}
+            />
+          </SectionCard>
+
           <SectionCard title="Required Fields">
             <div className="grid gap-4">
               {template.required_fields.map((fieldName) => {
@@ -178,41 +178,10 @@ export function PackageGenerator({
               })}
             </div>
           </SectionCard>
-
-          <SectionCard title="Package Outputs">
-            <div className="mb-4 flex flex-wrap gap-2">
-              <ButtonLike disabled>{selectedIds.length} selected</ButtonLike>
-              <ButtonLike onClick={() => selectByType("still")}>Select All Stills</ButtonLike>
-              <ButtonLike onClick={() => selectByType("video")}>Select All Videos</ButtonLike>
-              <ButtonLike
-                onClick={() => {
-                  const next = outputs.map((output) => output.id);
-                  setSelectedIds(next);
-                  setActiveOutputId(next[0] ?? "");
-                }}
-              >
-                Select All Outputs
-              </ButtonLike>
-            </div>
-            <OutputSelector
-              title="Stills"
-              outputs={stills}
-              selectedIds={selectedIds}
-              activeOutputId={activeOutputId}
-              onToggle={toggleOutput}
-            />
-            <OutputSelector
-              title="Videos"
-              outputs={videos}
-              selectedIds={selectedIds}
-              activeOutputId={activeOutputId}
-              onToggle={toggleOutput}
-            />
-          </SectionCard>
         </div>
 
         <div className="space-y-4">
-          <SectionCard title="Live MoDeck Preview">
+          <SectionCard title="Preview">
             <PreviewGrid
               outputs={outputs}
               selectedOutputIds={selectedIds}
@@ -333,57 +302,74 @@ function GeneratorField({
 }
 
 function OutputSelector({
-  title,
   outputs,
   selectedIds,
   activeOutputId,
   onToggle,
 }: {
-  title: string;
   outputs: MvpOutputFormat[];
   selectedIds: string[];
   activeOutputId: string;
   onToggle: (id: string) => void;
 }) {
   return (
-    <div className="mb-5 last:mb-0">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h3>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {outputs.map((output) => {
-          const selected = selectedIds.includes(output.id);
-          const active = activeOutputId === output.id;
+    <div className="grid gap-3">
+      {(["still", "video"] as const).map((type) => (
+        <div key={type}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {type === "still" ? "Stills" : "Videos"}
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {outputs
+              .filter((output) => output.type === type)
+              .map((output) => {
+                const selected = selectedIds.includes(output.id);
+                const active = activeOutputId === output.id;
 
-          return (
-            <button
-              key={output.id}
-              type="button"
-              onClick={() => onToggle(output.id)}
-              aria-pressed={selected}
-              className={`rounded-lg border p-3 text-left transition ${
-                active
-                  ? "border-blue-400 bg-blue-50 shadow-sm"
-                  : selected
-                    ? "border-slate-300 bg-white"
-                    : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
-              }`}
-            >
-              <span className="flex items-center justify-between gap-3">
-                <span className="font-semibold text-[#06153a]">{output.label}</span>
-                <span
-                  className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                    selected ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {active ? "Previewing" : selected ? "Selected" : "Add"}
-                </span>
-              </span>
-              <span className="mt-1 block text-sm text-slate-500">{output.aspectLabel}</span>
-            </button>
-          );
-        })}
-      </div>
+                return (
+                  <button
+                    key={output.id}
+                    type="button"
+                    onClick={() => onToggle(output.id)}
+                    aria-pressed={selected}
+                    title={getOutputTitle(output)}
+                    className={`min-h-16 rounded-lg border px-2 py-2 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                      active
+                        ? "border-blue-500 bg-blue-50 shadow-sm"
+                        : selected
+                          ? "border-slate-300 bg-white"
+                          : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {type === "still" ? "Still" : "Video"}
+                    </span>
+                    <span className="mt-1 block text-lg font-semibold text-[#06153a]">{output.aspectLabel}</span>
+                    <span
+                      className={`mt-1 inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+                        active
+                          ? "bg-blue-100 text-blue-800"
+                          : selected
+                            ? "bg-emerald-50 text-emerald-800"
+                            : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {active ? "Preview" : selected ? "On" : "Add"}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      ))}
     </div>
   );
+}
+
+function getOutputTitle(output: MvpOutputFormat) {
+  return `${output.width}x${output.height} · ${output.aspectLabel} · ${output.recommendedPlatforms
+    .slice(0, 2)
+    .join(", ")}`;
 }
 
 function getFieldValue(fields: PackageField[], fieldName: string) {

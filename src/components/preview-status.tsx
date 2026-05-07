@@ -1,9 +1,9 @@
 import type { PreviewStatusState } from "@/lib/preview-state";
 
 const labels: Record<PreviewStatusState, string> = {
-  idle: "MoDeck live",
-  updating: "MoDeck live",
-  updated: "MoDeck live",
+  idle: "Template live",
+  updating: "Template live",
+  updated: "Template live",
   error: "Preview unavailable",
 };
 
