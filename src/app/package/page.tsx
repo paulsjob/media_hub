@@ -46,6 +46,7 @@ export default async function PackagePage({
             generatedAt,
           }}
           changeOutputsHref={backToGenerateHref}
+          createAnotherVersionHref={backToGenerateHref}
         />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">

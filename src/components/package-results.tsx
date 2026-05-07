@@ -31,6 +31,7 @@ export function PackageResults({
   packageName,
   packageContext,
   changeOutputsHref,
+  createAnotherVersionHref,
 }: {
   stills: MvpOutputFormat[];
   videos: MvpOutputFormat[];
@@ -45,6 +46,7 @@ export function PackageResults({
     generatedAt: string;
   };
   changeOutputsHref: string;
+  createAnotherVersionHref: string;
 }) {
   const [renderResults, setRenderResults] = useState(initialRenderResults);
   const [downloadedOutputIds, setDownloadedOutputIds] = useState<string[]>([]);
@@ -170,6 +172,7 @@ export function PackageResults({
         packageGenerated={outputs.length > 0}
         packageDownloaded={packageDownloaded}
         changeOutputsHref={changeOutputsHref}
+        createAnotherVersionHref={createAnotherVersionHref}
       />
 
       <ArchiveMetadataCard
@@ -248,6 +251,7 @@ function PackageReviewHeader({
   packageGenerated,
   packageDownloaded,
   changeOutputsHref,
+  createAnotherVersionHref,
 }: {
   packageContext: {
     quote?: string;
@@ -263,6 +267,7 @@ function PackageReviewHeader({
   packageGenerated: boolean;
   packageDownloaded: boolean;
   changeOutputsHref: string;
+  createAnotherVersionHref: string;
 }) {
   const requiredFieldsCompleted = Boolean(
     packageContext.quote?.trim() &&
@@ -285,7 +290,15 @@ function PackageReviewHeader({
             Review package context, confirm output readiness, and download the files currently available.
           </p>
         </div>
-        <SecondaryButton href={changeOutputsHref}>Change Outputs</SecondaryButton>
+        <div className="grid gap-3 sm:min-w-56">
+          <SecondaryButton href={changeOutputsHref}>Change Outputs</SecondaryButton>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <SecondaryButton href={createAnotherVersionHref}>Create Another Version</SecondaryButton>
+            <p className="mt-2 text-xs leading-5 text-slate-600">
+              Start from this package to make a revised, localized, or alternate-output version.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
