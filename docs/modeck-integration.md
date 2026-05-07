@@ -136,3 +136,18 @@ The first real integration should be intentionally small:
 - One package experience for the user.
 
 No live MoDeck API calls are active in the mock MVP.
+
+## J. Local Preview Troubleshooting
+
+If local MoDeck preview testing fails with an `EPERM: operation not permitted, mkdir` error under this path:
+
+```text
+C:\Users\plcon\MoDeck Sync\_modk-data\Temp\preview-frames\...
+```
+
+Create or repair permissions for MoDeck's preview frame temp directory:
+
+```cmd
+mkdir "%USERPROFILE%\MoDeck Sync\_modk-data\Temp\preview-frames"
+icacls "%USERPROFILE%\MoDeck Sync" /grant "%USERNAME%:(OI)(CI)F" /T
+```
