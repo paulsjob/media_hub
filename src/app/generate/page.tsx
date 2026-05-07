@@ -15,7 +15,7 @@ export default function GeneratePage() {
             Fill the fields and choose your outputs.
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            MEDIA LAB will mock-generate stills and videos in the exact sizes selected below.
+            Preview the active source render with MoDeck, then generate the selected stills and videos.
           </p>
         </div>
       </div>
