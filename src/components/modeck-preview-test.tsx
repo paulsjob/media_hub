@@ -27,12 +27,27 @@ interface PreviewResult {
   responseSummary?: unknown;
 }
 
+const modeckOptionFields = [
+  "QUOTE_TEXT",
+  "SPEAKER_NAME",
+  "SPEAKER_TITLE",
+  "CONTEXT_LINE",
+  "BRAND",
+  "QUOTE_FONT_SIZE",
+  "QUOTE_LINE_SPACING",
+  "QUOTE_POSITION_X",
+  "QUOTE_POSITION_y",
+  "HEADSHOT",
+];
+
 export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestProps) {
   const [form, setForm] = useState(defaults);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [imageState, setImageState] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
+  const renderStatus = loading ? "requesting" : result?.ok ? "preview returned" : result?.status ?? "ready";
+  const imageSrc = result?.imageBase64 ? toImageSrc(result.imageBase64) : null;
 
   function updateField(key: keyof typeof defaults, value: string) {
     setForm((current) => ({
@@ -74,7 +89,7 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
           <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">Dev Harness</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">MoDeck Preview Test</h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-600">
-            Test whether MoDeck /preview can become the source-of-truth preview layer for Quote Card.
+            Internal template preview workflow for checking the current Quote Card MoDeck /preview integration.
           </p>
         </header>
 
@@ -85,6 +100,11 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
             <code className="font-semibold">MODECK_API_BASE_URL</code> to enable this harness.
           </div>
         ) : null}
+
+        <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+          <strong>Field-name warning:</strong> <code>QUOTE_POSITION_y</code> intentionally uses a lowercase{" "}
+          <code>y</code>. Keep that spelling unless the current MOGRT is updated to expect a different option name.
+        </div>
 
         <section className="grid gap-5 lg:grid-cols-[380px_1fr]">
           <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -140,15 +160,44 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
             >
               {loading ? "Fetching MoDeck Preview..." : "Fetch MoDeck Preview"}
             </button>
+
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">MoDeck Option Fields</h3>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {modeckOptionFields.map((field) => (
+                  <code
+                    key={field}
+                    className={
+                      field === "QUOTE_POSITION_y"
+                        ? "rounded border border-amber-300 bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-950"
+                        : "rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700"
+                    }
+                  >
+                    {field}
+                  </code>
+                ))}
+              </div>
+            </div>
           </form>
 
           <div className="min-w-0 space-y-5">
+            <section className="grid gap-3 sm:grid-cols-3">
+              <Metric label="Render Status" value={String(renderStatus)} />
+              <Metric
+                label="Duration"
+                value={typeof result?.durationMs === "number" ? `${result.durationMs}ms` : loading ? "running" : "-"}
+              />
+              <Metric
+                label="Image Base64"
+                value={result?.imageBase64 ? `${Math.round(result.imageBase64.length / 1024)} KB` : "none"}
+              />
+            </section>
+
             <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wide">MoDeck Preview Response</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wide">Returned Image Preview</h2>
                 <p className="text-sm text-slate-500">
-                  Status: <span className="font-semibold">{result?.status ?? (configured ? "ready" : "disabled")}</span>
-                  {typeof result?.durationMs === "number" ? ` / ${result.durationMs}ms` : ""}
+                  Status: <span className="font-semibold">{renderStatus}</span>
                 </p>
               </div>
 
@@ -174,11 +223,11 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
                   </span>
                 </div>
                 <div className="grid min-h-[420px] w-full min-w-0 place-items-center bg-[linear-gradient(45deg,#1e293b_25%,transparent_25%),linear-gradient(-45deg,#1e293b_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1e293b_75%),linear-gradient(-45deg,transparent_75%,#1e293b_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] p-4">
-                {result?.imageBase64 ? (
+                {imageSrc ? (
                   <div className="flex w-full min-w-0 flex-col items-center gap-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={toImageSrc(result.imageBase64)}
+                      src={imageSrc}
                       alt="MoDeck preview result"
                       onLoad={(event) => {
                         setImageState("loaded");
@@ -192,12 +241,19 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
                     />
                     <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-slate-300">
                       <a
-                        href={toImageSrc(result.imageBase64)}
+                        href={imageSrc}
                         target="_blank"
                         rel="noreferrer"
                         className="rounded-md border border-slate-600 px-3 py-1.5 font-semibold text-white hover:bg-slate-800"
                       >
                         Open image
+                      </a>
+                      <a
+                        href={imageSrc}
+                        download="modeck-preview.png"
+                        className="rounded-md border border-slate-600 px-3 py-1.5 font-semibold text-white hover:bg-slate-800"
+                      >
+                        Download preview image
                       </a>
                       <span>
                         {imageState === "loading"
@@ -219,15 +275,37 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
             </section>
 
             <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide">Raw Summary</h2>
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide">Raw Response Summary</h2>
               <pre className="max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs leading-5 text-slate-100">
-                {JSON.stringify(result ?? { configured }, null, 2)}
+                {JSON.stringify(
+                  result
+                    ? {
+                        ok: result.ok,
+                        status: result.status,
+                        durationMs: result.durationMs,
+                        requestSummary: result.requestSummary,
+                        responseSummary: result.responseSummary,
+                        error: result.error,
+                      }
+                    : { configured, request: form },
+                  null,
+                  2,
+                )}
               </pre>
             </section>
           </div>
         </section>
       </div>
     </main>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-2 truncate text-lg font-semibold text-[#06153a]">{value}</p>
+    </div>
   );
 }
 
