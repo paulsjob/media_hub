@@ -313,32 +313,47 @@ function OutputSelector({
   onToggle: (id: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {outputs.map((output) => {
-        const selected = selectedIds.includes(output.id);
-        const active = activeOutputId === output.id;
-
-        return (
-          <button
-            key={output.id}
-            type="button"
-            onClick={() => onToggle(output.id)}
-            aria-pressed={selected}
-            title={getOutputTitle(output)}
-            className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
-              active
-                ? "border-blue-500 bg-blue-50 text-blue-900 shadow-sm"
-                : selected
-                  ? "border-emerald-300 bg-emerald-50 text-[#06153a]"
-                  : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
-            }`}
+    <div className="grid gap-2">
+      {(["still", "video"] as const).map((type) => (
+        <div key={type} className="flex items-center gap-2">
+          <span
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold text-[#06153a]"
+            title={type === "still" ? "Still outputs" : "Video outputs"}
+            aria-label={type === "still" ? "Still outputs" : "Video outputs"}
           >
-            <RatioGlyph ratio={output.aspectLabel} active={active} selected={selected} />
-            <span>{output.type === "video" ? "Video" : "Still"} {output.aspectLabel}</span>
-            {selected ? <span aria-hidden="true">OK</span> : null}
-          </button>
-        );
-      })}
+            {type === "still" ? "IMG" : "PLAY"}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {outputs
+              .filter((output) => output.type === type)
+              .map((output) => {
+                const selected = selectedIds.includes(output.id);
+                const active = activeOutputId === output.id;
+
+                return (
+                  <button
+                    key={output.id}
+                    type="button"
+                    onClick={() => onToggle(output.id)}
+                    aria-pressed={selected}
+                    title={getOutputTitle(output)}
+                    className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                      active
+                        ? "border-blue-500 bg-blue-50 text-blue-900 shadow-sm"
+                        : selected
+                          ? "border-emerald-300 bg-emerald-50 text-[#06153a]"
+                          : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+                    }`}
+                  >
+                    <RatioGlyph ratio={output.aspectLabel} active={active} selected={selected} />
+                    <span>{output.aspectLabel}</span>
+                    {selected ? <span aria-hidden="true">OK</span> : null}
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

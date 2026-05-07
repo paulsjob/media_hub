@@ -217,17 +217,14 @@ export function PreviewGrid({
     <div className="space-y-3">
       {activeRatio ? (
         <div className="space-y-3">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <div className="flex min-h-7 flex-wrap items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-[#06153a]">Preview</span>
-              <div className="flex flex-wrap items-center gap-3">
-                <PreviewStatus status={getPreviewStatus(activeModeckPreview.state)} />
-                <span className="text-sm font-semibold text-slate-500">
-                  {safeActiveIndex + 1} of {previewOptions.length} selected
-                </span>
-              </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
+            <div className="flex min-h-6 flex-wrap items-center justify-between gap-2">
+              <PreviewStatus status={getPreviewStatus(activeModeckPreview.state)} />
+              <span className="text-sm font-semibold text-slate-500">
+                {safeActiveIndex + 1} of {previewOptions.length} selected
+              </span>
             </div>
-            <div className="mt-1 flex min-h-8 flex-wrap items-center justify-between gap-2">
+            <div className="mt-0.5 flex min-h-7 flex-wrap items-center justify-between gap-2">
               <span className="text-sm text-slate-600">{getActiveFormatLabel(activeOption.output)}</span>
               <div className="flex items-center gap-2">
                 <button
