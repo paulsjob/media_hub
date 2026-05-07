@@ -2,71 +2,60 @@ import { AppShell } from "@/components/app-shell";
 import {
   PageHeader,
   PrimaryActionButton,
-  SecondaryButton,
   SectionCard,
 } from "@/components/ui";
 
-interface TemplateLibraryItem {
+interface ConnectedTemplate {
   name: string;
-  bestFor: string[];
+  status: "Connected";
   requiredFields: string[];
   availableOutputs: string[];
-  status: "Active" | "Planned";
-  modeckStatus: "Connected" | "Not connected yet";
-  useHref?: string;
-  previewHref?: string;
+  bestFor: string;
+  averageBuildPath: string;
+  useHref: string;
 }
 
-const templateLibrary: TemplateLibraryItem[] = [
-  {
-    name: "Quote Card",
-    bestFor: ["Rapid response quotes", "Surrogate statements", "Press moments"],
-    requiredFields: ["Primary Quote", "Speaker Name", "Speaker Title", "Context Line"],
-    availableOutputs: ["16:9 still", "1:1 still", "4:5 still", "9:16 still", "16:9 video"],
-    status: "Active",
-    modeckStatus: "Connected",
-    useHref: "/generate",
-    previewHref: "/dev/modeck-preview-test",
-  },
+interface PlannedTemplate {
+  name: string;
+  bestFor: string;
+}
+
+const quoteCardTemplate: ConnectedTemplate = {
+  name: "Quote Card",
+  status: "Connected",
+  bestFor: "Official statements, member quotes, rapid response",
+  requiredFields: ["Quote", "Speaker", "Speaker Title", "Context Line"],
+  availableOutputs: [
+    "Static image",
+    "Motion render",
+    "Package download",
+    "Platform copy",
+    "Archive metadata",
+  ],
+  averageBuildPath: "Fill fields -> approve preview -> generate package",
+  useHref: "/generate",
+};
+
+const plannedTemplates: PlannedTemplate[] = [
   {
     name: "Stat Card",
-    bestFor: ["Single-number proof points", "Polling highlights", "Economic claims"],
-    requiredFields: ["Stat", "Stat Label", "Source", "Context Line"],
-    availableOutputs: ["16:9 still", "1:1 still", "4:5 still"],
-    status: "Planned",
-    modeckStatus: "Not connected yet",
+    bestFor: "Single-number proof points and sourced metrics.",
   },
   {
     name: "Contrast Card",
-    bestFor: ["Side-by-side comparisons", "Record contrasts", "Before and after framing"],
-    requiredFields: ["Left Label", "Left Claim", "Right Label", "Right Claim", "Source"],
-    availableOutputs: ["16:9 still", "1:1 still", "9:16 still"],
-    status: "Planned",
-    modeckStatus: "Not connected yet",
+    bestFor: "Side-by-side comparisons and clear before/after framing.",
   },
   {
-    name: "What Happened / Why It Matters",
-    bestFor: ["Explainers", "Breaking-news context", "Issue education"],
-    requiredFields: ["What Happened", "Why It Matters", "Source", "Callout"],
-    availableOutputs: ["16:9 still", "4:5 still", "9:16 still", "Caption pack"],
-    status: "Planned",
-    modeckStatus: "Not connected yet",
+    name: "Vote Record Card",
+    bestFor: "Plain-English summaries of votes and legislative records.",
   },
   {
-    name: "Localized Card",
-    bestFor: ["District-specific messaging", "Local proof points", "Geo-targeted social"],
-    requiredFields: ["Location", "Localized Claim", "Messenger", "Source"],
-    availableOutputs: ["1:1 still", "4:5 still", "9:16 still"],
-    status: "Planned",
-    modeckStatus: "Not connected yet",
+    name: "Explainer Card",
+    bestFor: "Short context explainers and what-it-means moments.",
   },
   {
     name: "Clip Packaging Pack",
-    bestFor: ["Short video clips", "Captioned moments", "Platform-ready cutdowns"],
-    requiredFields: ["Clip File", "Headline", "Speaker", "Caption", "Source"],
-    availableOutputs: ["16:9 video", "1:1 video", "9:16 video", "Thumbnail still"],
-    status: "Planned",
-    modeckStatus: "Not connected yet",
+    bestFor: "Short video clips, captions, thumbnails, and platform cutdowns.",
   },
 ];
 
@@ -77,18 +66,18 @@ export default function TemplatesPage() {
         eyebrow="Media Operations / Template Library"
         title="Template"
         accent="Library"
-        subtitle="Choose the repeatable content package to build next."
+        subtitle="Start with a connected template, then turn a message into reusable package outputs."
       />
 
-      <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-        Template Library is the entry point for repeatable content packages. Quote Card is currently the only
-        MoDeck-connected template.
+      <div className="mb-5 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+        <ConnectedTemplateCard template={quoteCardTemplate} />
+        <FactorySummary />
       </div>
 
-      <SectionCard title="Internal Template Inventory">
-        <div className="grid gap-4 lg:grid-cols-2">
-          {templateLibrary.map((template) => (
-            <TemplateLibraryCard key={template.name} template={template} />
+      <SectionCard title="Planned Template Roadmap">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {plannedTemplates.map((template) => (
+            <PlannedTemplateCard key={template.name} template={template} />
           ))}
         </div>
       </SectionCard>
@@ -96,48 +85,81 @@ export default function TemplatesPage() {
   );
 }
 
-function TemplateLibraryCard({ template }: { template: TemplateLibraryItem }) {
-  const isActive = template.status === "Active";
-
+function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
   return (
-    <article className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-5">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <article className="flex h-full flex-col rounded-lg border border-emerald-200 bg-white p-5 shadow-sm">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Template</p>
-          <h2 className="mt-1 text-xl font-semibold text-[#06153a]">{template.name}</h2>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Primary Connected Template</p>
+          <h2 className="mt-1 text-2xl font-semibold text-[#06153a]">{template.name}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            The active MoDeck-connected production path for quote graphics, packages, platform copy, and archive metadata.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <StatusPill label={template.status} tone={isActive ? "success" : "neutral"} />
-          <StatusPill
-            label={template.modeckStatus}
-            tone={template.modeckStatus === "Connected" ? "info" : "neutral"}
-          />
-        </div>
+        <StatusPill label={template.status} tone="success" />
       </div>
 
-      <div className="grid flex-1 gap-4 md:grid-cols-3">
-        <TemplateList title="Best For" items={template.bestFor} />
+      <div className="grid flex-1 gap-4 lg:grid-cols-2">
+        <TemplateText title="Best For" value={template.bestFor} />
         <TemplateList title="Required Fields" items={template.requiredFields} />
         <TemplateList title="Available Outputs" items={template.availableOutputs} />
+        <TemplateText title="Average Build Path" value={template.averageBuildPath} />
       </div>
 
-      <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row">
-        {template.useHref ? (
-          <PrimaryActionButton href={template.useHref} className="sm:min-w-36">
-            Use Template
-          </PrimaryActionButton>
-        ) : (
-          <DisabledAction variant="primary">Use Template</DisabledAction>
-        )}
-        {template.previewHref ? (
-          <SecondaryButton href={template.previewHref} className="sm:min-w-36">
-            Preview/Test
-          </SecondaryButton>
-        ) : (
-          <DisabledAction>Preview/Test</DisabledAction>
-        )}
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <PrimaryActionButton href={template.useHref} className="sm:min-w-40">
+          Use Template
+        </PrimaryActionButton>
       </div>
     </article>
+  );
+}
+
+function FactorySummary() {
+  return (
+    <aside className="rounded-lg border border-blue-200 bg-blue-50 p-5 text-blue-950">
+      <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Template Factory</p>
+      <h2 className="mt-1 text-xl font-semibold text-[#06153a]">Repeatable media packages</h2>
+      <p className="mt-3 text-sm leading-6">
+        Pick a template, validate the preview, generate outputs, then leave with downloads, platform copy,
+        and archive-ready metadata.
+      </p>
+      <div className="mt-4 grid gap-2 text-sm font-semibold">
+        <span>1 connected template</span>
+        <span>5 planned formats</span>
+        <span>Package delivery workflow live</span>
+      </div>
+    </aside>
+  );
+}
+
+function PlannedTemplateCard({ template }: { template: PlannedTemplate }) {
+  return (
+    <article className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Future Template</p>
+          <h3 className="mt-1 text-lg font-semibold text-[#06153a]">{template.name}</h3>
+        </div>
+        <StatusPill label="Planned" tone="neutral" />
+      </div>
+      <TemplateText title="Best For" value={template.bestFor} />
+      <div className="mt-4 flex-1">
+        <TemplateText title="Available Outputs" value="Placeholder / Coming soon" />
+      </div>
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <DisabledAction>Coming soon</DisabledAction>
+      </div>
+    </article>
+  );
+}
+
+function TemplateText({ title, value }: { title: string; value: string }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <p className="text-sm leading-6 text-slate-700">{value}</p>
+    </div>
   );
 }
 
@@ -172,20 +194,13 @@ function StatusPill({
 
 function DisabledAction({
   children,
-  variant = "secondary",
 }: {
   children: React.ReactNode;
-  variant?: "primary" | "secondary";
 }) {
-  const variantClass =
-    variant === "primary"
-      ? "bg-slate-300 text-white"
-      : "border border-slate-200 bg-slate-50 text-slate-400";
-
   return (
     <span
       aria-disabled="true"
-      className={`inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-md px-4 text-sm font-semibold ${variantClass} sm:min-w-36`}
+      className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-400 sm:min-w-36"
     >
       {children}
     </span>
