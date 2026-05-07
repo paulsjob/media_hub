@@ -1,4 +1,4 @@
-import { DownloadRow, MvpShell, PrimaryButton, SecondaryButton, SectionCard } from "@/components/ui";
+import { DownloadRow, MvpShell, SecondaryButton, SectionCard } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
 
 export default async function PackagePage({
@@ -13,14 +13,19 @@ export default async function PackagePage({
   const stills = selectedOutputs.filter((output) => output.type === "still");
   const videos = selectedOutputs.filter((output) => output.type === "video");
   const renderResults = parseRenderResults(renders);
+  const hasLiveModeckOutput = Object.values(renderResults).some(
+    (result) => result.source === "modeck-preview",
+  );
 
   return (
     <MvpShell>
       <section className="mx-auto mb-8 max-w-3xl text-center">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-700">Mock Generation Complete</p>
+        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-700">
+          {hasLiveModeckOutput ? "MoDeck Preview Package Ready" : "Package Ready"}
+        </p>
         <h1 className="text-4xl font-semibold tracking-tight text-[#06153a]">Your package is ready.</h1>
         <p className="mt-4 text-lg leading-8 text-slate-600">
-          Download the selected stills and videos, or start a new package.
+          Download the available files below. Live MoDeck stills are labeled separately from placeholder outputs.
         </p>
       </section>
 
@@ -34,6 +39,7 @@ export default async function PackagePage({
                   output={output}
                   editId={renderResults[output.id]?.editId}
                   downloadUrl={renderResults[output.id]?.temporaryDownloadUrl}
+                  source={renderResults[output.id]?.source}
                 />
               ))
             ) : (
@@ -51,6 +57,7 @@ export default async function PackagePage({
                   output={output}
                   editId={renderResults[output.id]?.editId}
                   downloadUrl={renderResults[output.id]?.temporaryDownloadUrl}
+                  source={renderResults[output.id]?.source}
                 />
               ))
             ) : (
@@ -60,7 +67,6 @@ export default async function PackagePage({
         </SectionCard>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <PrimaryButton href="/package">Download All</PrimaryButton>
           <SecondaryButton href="/">Create Another Package</SecondaryButton>
         </div>
       </div>
@@ -72,6 +78,7 @@ interface PackageRenderResult {
   outputId: string;
   editId: string;
   temporaryDownloadUrl: string;
+  source?: "modeck-preview" | "mock-placeholder";
 }
 
 function parseRenderResults(value: string): Record<string, PackageRenderResult> {
