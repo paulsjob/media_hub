@@ -509,6 +509,8 @@ export function DownloadRow({
   editId?: string;
   downloadUrl?: string;
 }) {
+  const safeDownloadUrl = getSafeDownloadUrl(downloadUrl, editId, output.id);
+
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
       <div>
@@ -520,11 +522,24 @@ export function DownloadRow({
         </p>
         {editId ? <p className="mt-1 text-xs text-slate-400">Mock edit ID: {editId}</p> : null}
       </div>
-      <SecondaryButton href={downloadUrl} className="shrink-0">
+      <SecondaryButton href={safeDownloadUrl} className="shrink-0">
         Download
       </SecondaryButton>
     </div>
   );
+}
+
+function getSafeDownloadUrl(downloadUrl: string, editId: string | undefined, outputId: string) {
+  if (!downloadUrl.includes("mock.modeck.local")) {
+    return downloadUrl;
+  }
+
+  const query = new URLSearchParams({
+    editId: editId ?? "mock-edit",
+    outputId,
+  });
+
+  return `/api/mock-modeck/download?${query.toString()}`;
 }
 
 export function AssetListItem({ view }: { view: AssetPackageView }) {

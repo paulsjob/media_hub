@@ -131,11 +131,16 @@ function createMockEditId(packageName: string, suffix: string) {
 }
 
 function createMockRenderFile(editId: string, output: (typeof MVP_OUTPUT_FORMATS)[number]) {
+  const query = new URLSearchParams({
+    editId,
+    outputId: output.id,
+  });
+
   return {
     outputId: output.id,
     filename: `quote-card-${output.id}.${output.type === "video" ? "mp4" : "png"}`,
     contentType: output.type === "video" ? "video/mp4" : "image/png",
-    temporaryDownloadUrl: `https://mock.modeck.local/renders/${editId}/${output.id}`,
+    temporaryDownloadUrl: `/api/mock-modeck/download?${query.toString()}`,
     width: output.width,
     height: output.height,
     ratio: output.aspectLabel,
