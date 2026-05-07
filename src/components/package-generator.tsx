@@ -97,7 +97,10 @@ export function PackageGenerator({
     const renderedOutputs = renderResults.map((result) => ({
       outputId: result.outputId,
       editId: result.editId,
-      temporaryDownloadUrl: result.files[0]?.temporaryDownloadUrl ?? "",
+      temporaryDownloadUrl:
+        getLivePreviewDownloadUrl(result.outputId, outputs, content) ??
+        result.files[0]?.temporaryDownloadUrl ??
+        "",
     }));
     const params = new URLSearchParams({
       outputs: selectedIds.join(","),
@@ -195,4 +198,26 @@ function GeneratorField({
 
 function getFieldValue(fields: PackageField[], fieldName: string) {
   return fields.find((field) => field.field_name === fieldName)?.field_value ?? "";
+}
+
+function getLivePreviewDownloadUrl(
+  outputId: string,
+  outputs: MvpOutputFormat[],
+  content: PreviewContent,
+) {
+  const output = outputs.find((item) => item.id === outputId);
+
+  if (!output || output.type !== "still" || output.aspectLabel !== "16:9") {
+    return null;
+  }
+
+  const query = new URLSearchParams({
+    size: `${output.width}x${output.height}`,
+    quote: content.quote,
+    speakerName: content.speakerName,
+    speakerTitle: content.speakerTitle,
+    contextLine: content.contextLine,
+  });
+
+  return `/api/modeck/preview/download?${query.toString()}`;
 }

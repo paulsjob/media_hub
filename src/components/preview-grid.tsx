@@ -278,9 +278,9 @@ export function PreviewGrid({
                 )
               }
             />
-            {activeModeckPreview.state === "loaded" && activeModeckPreview.imageSrc ? null : (
+            {!activeModeckPreview.imageSrc && activeModeckPreview.state !== "loading" ? (
               <TemplatePreviewRenderer ratio={activeRatio} content={content} />
-            )}
+            ) : null}
           </div>
         </div>
       ) : (
@@ -314,17 +314,31 @@ function ModeckPreviewPanel({
     return null;
   }
 
-  if (state !== "loaded" || !imageSrc) {
+  if (!imageSrc) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-        <div className="mb-1 flex items-center gap-2 font-semibold text-[#06153a]">
-          <span
-            className={`h-2 w-2 rounded-full ${state === "loading" ? "bg-blue-500" : "bg-orange-500"}`}
-            aria-hidden="true"
-          />
-          {state === "loading" ? "MoDeck preview rendering" : "Local preview active"}
+      <div
+        className={`grid min-h-[360px] place-items-center rounded-lg border border-dashed p-8 text-center text-sm ${
+          state === "loading"
+            ? "border-blue-200 bg-blue-50 text-blue-900"
+            : "border-slate-300 bg-slate-50 text-slate-600"
+        }`}
+      >
+        <div>
+          <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-white shadow-sm">
+            <span
+              className={`h-3 w-3 rounded-full ${state === "loading" ? "animate-pulse bg-blue-500" : "bg-orange-500"}`}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="mb-1 flex items-center justify-center gap-2 font-semibold text-[#06153a]">
+            <span
+              className={`h-2 w-2 rounded-full ${state === "loading" ? "bg-blue-500" : "bg-orange-500"}`}
+              aria-hidden="true"
+            />
+            {state === "loading" ? "MoDeck preview rendering" : "Local preview active"}
+          </div>
+          <p>{message}</p>
         </div>
-        <p>{message}</p>
       </div>
     );
   }
@@ -332,20 +346,31 @@ function ModeckPreviewPanel({
   return (
     <div className="overflow-hidden rounded-lg border border-slate-300 bg-slate-950">
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-3 py-2 text-xs text-slate-200">
-        <span className="font-semibold uppercase tracking-wide">MoDeck preview loaded</span>
+        <span className="font-semibold uppercase tracking-wide">
+          {state === "loading" ? "Updating MoDeck preview" : "MoDeck preview loaded"}
+        </span>
         <span className="text-slate-400">
           {imageSize ? `${imageSize.width}x${imageSize.height}` : "Loading image"}
           {typeof durationMs === "number" ? ` / ${durationMs}ms` : ""}
         </span>
       </div>
-      <div className="grid min-h-[360px] place-items-center bg-[linear-gradient(45deg,#1e293b_25%,transparent_25%),linear-gradient(-45deg,#1e293b_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1e293b_75%),linear-gradient(-45deg,transparent_75%,#1e293b_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] p-4">
+      <div className="relative grid min-h-[360px] place-items-center bg-[linear-gradient(45deg,#1e293b_25%,transparent_25%),linear-gradient(-45deg,#1e293b_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1e293b_75%),linear-gradient(-45deg,transparent_75%,#1e293b_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] p-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imageSrc}
           alt="MoDeck-rendered quote card preview"
           onLoad={(event) => onImageLoad(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)}
-          className="block max-h-[560px] max-w-full rounded-sm border border-slate-700 bg-white object-contain shadow-2xl"
+          className={`block max-h-[560px] max-w-full rounded-sm border border-slate-700 bg-white object-contain shadow-2xl transition-opacity ${
+            state === "loading" ? "opacity-55" : "opacity-100"
+          }`}
         />
+        {state === "loading" ? (
+          <div className="absolute inset-0 grid place-items-center bg-slate-950/20">
+            <div className="rounded-md bg-slate-950/90 px-4 py-2 text-sm font-semibold text-white shadow-lg">
+              Updating preview...
+            </div>
+          </div>
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2 border-t border-slate-700 px-3 py-2 text-xs text-slate-300">
         <a
