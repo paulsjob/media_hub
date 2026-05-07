@@ -161,6 +161,17 @@ export function PackageGenerator({
         </div>
       </SectionCard>
 
+      <SectionCard title="Live MoDeck Preview">
+        <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-[#06153a]">Validate the current fields before package generation.</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            The active 16:9 source preview renders through MoDeck when available. Other selected ratios continue to
+            use the local layout preview until their MoDeck templates are connected.
+          </p>
+        </div>
+        <PreviewGrid ratios={selectedRatios} content={content} />
+      </SectionCard>
+
       <SectionCard title="Choose Outputs">
         <div className="mb-5 flex flex-wrap gap-2">
           <ButtonLike disabled>{selectedIds.length} selected</ButtonLike>
@@ -175,17 +186,6 @@ export function PackageGenerator({
           <OutputGroup title="Stills" outputs={stills} selectedIds={selectedIds} onToggle={toggleOutput} />
           <OutputGroup title="Videos" outputs={videos} selectedIds={selectedIds} onToggle={toggleOutput} />
         </div>
-      </SectionCard>
-
-      <SectionCard title="Live MoDeck Preview">
-        <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-[#06153a]">Validate the current fields before package generation.</p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            The active 16:9 source preview renders through MoDeck when available. Other selected ratios continue to
-            use the local layout preview until their MoDeck templates are connected.
-          </p>
-        </div>
-        <PreviewGrid ratios={selectedRatios} content={content} />
       </SectionCard>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">

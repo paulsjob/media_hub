@@ -95,6 +95,14 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
           </p>
         </header>
 
+        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+          This is a diagnostic harness. For normal production, use{" "}
+          <Link href="/generate" className="font-semibold text-blue-900 underline underline-offset-2">
+            Quote Card Package Generator
+          </Link>
+          .
+        </div>
+
         {!configured ? (
           <div className="mb-5 rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900">
             Live MoDeck preview is disabled. Set server-side env vars{" "}
@@ -281,9 +289,10 @@ export function ModeckPreviewTest({ configured, defaults }: ModeckPreviewTestPro
                   </p>
                   <Link
                     href={generateHref}
-                    className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#12306a]"
+                    className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold !text-white shadow-sm hover:bg-[#12306a] hover:!text-white"
+                    style={{ color: "#ffffff" }}
                   >
-                    Generate Package
+                    <span className="text-white">Generate Package</span>
                   </Link>
                 </div>
               ) : null}
