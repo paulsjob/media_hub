@@ -343,12 +343,8 @@ function OutputSelector({
                 const active = activeOutputId === output.id;
                 const selectedClass =
                   output.type === "still"
-                    ? active
-                      ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
-                      : "border-emerald-300 bg-emerald-50 text-emerald-900"
-                    : active
-                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                      : "border-blue-300 bg-blue-50 text-blue-900";
+                    ? "border-emerald-600 bg-emerald-600 text-white"
+                    : "border-blue-600 bg-blue-600 text-white";
 
                 return (
                   <button
@@ -359,7 +355,7 @@ function OutputSelector({
                     title={getOutputTitle(output)}
                     className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
                       selected
-                        ? selectedClass
+                        ? `${selectedClass} ${active ? "ring-2 ring-slate-300 ring-offset-1" : ""}`
                         : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
                     }`}
                   >
@@ -485,6 +481,8 @@ function getLivePreviewDownloadUrl(
     speakerName: content.speakerName,
     speakerTitle: content.speakerTitle,
     contextLine: content.contextLine,
+    brand: content.brand ?? "2",
+    headshotFilename: getModeckHeadshotFilename(content.headshot),
   });
 
   return `/api/modeck/preview/download?${query.toString()}`;

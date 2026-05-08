@@ -177,7 +177,7 @@ export function PackageResults({
         createNewPackageHref={createNewPackageHref}
       />
 
-      <CollapsibleSection title="Output Previews" icon="eye" defaultOpen>
+      <CollapsibleSection title="Output Previews" defaultOpen>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {outputs.map((output) => (
             <VisualOutputPreviewCard
@@ -205,7 +205,7 @@ export function PackageResults({
         placeholderFileCount={placeholderFileCount}
       />
 
-      <CollapsibleSection title="Downloads" icon="download" defaultOpen>
+      <CollapsibleSection title="Downloads" defaultOpen>
         <DownloadAllPackage
           packageName={packageName}
           files={readyDownloads}
@@ -239,20 +239,20 @@ export function PackageResults({
 
 function CollapsibleSection({
   title,
-  icon,
   defaultOpen = false,
   children,
 }: {
   title: string;
-  icon?: "archive" | "download" | "eye" | "message";
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
   return (
-    <details open={defaultOpen} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-        {icon ? <Icon name={icon} className="h-4 w-4 text-slate-400" /> : null}
-        {title}
+    <details open={defaultOpen} className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm [&>summary::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <span>{title}</span>
+        <span className="text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">
+          &gt;
+        </span>
       </summary>
       <div className="mt-4">{children}</div>
     </details>
@@ -469,7 +469,7 @@ function PlatformCopyCard({
   }
 
   return (
-    <CollapsibleSection title="Platform Copy" icon="message">
+    <CollapsibleSection title="Platform Copy">
       <div className="space-y-2">
         {copyBlocks.map((block) => (
           <div
@@ -531,7 +531,7 @@ function ArchiveMetadataCard({
   }
 
   return (
-    <CollapsibleSection title="Archive Details" icon="archive">
+    <CollapsibleSection title="Archive Details">
       <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
         <div className="grid gap-3 sm:grid-cols-2">
           <MetadataValue label="Package Type" value={metadata.packageType} />

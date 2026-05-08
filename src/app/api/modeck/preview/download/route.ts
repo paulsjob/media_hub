@@ -29,6 +29,8 @@ export async function GET(request: Request) {
     speakerName: url.searchParams.get("speakerName") ?? "",
     speakerTitle: url.searchParams.get("speakerTitle") ?? "",
     contextLine: url.searchParams.get("contextLine") ?? "",
+    brand: url.searchParams.get("brand") ?? "2",
+    headshotFilename: url.searchParams.get("headshotFilename") ?? "",
   };
 
   const previewPayload = {
@@ -81,6 +83,8 @@ function buildOptions(fields: {
   speakerName: string;
   speakerTitle: string;
   contextLine: string;
+  brand: string;
+  headshotFilename: string;
 }): ModeckQuoteBoxOption[] {
   return buildQuoteBoxOptions(fields);
 }

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Icon } from "@/components/icons";
 import {
@@ -95,16 +98,22 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
         <div className="flex shrink-0 items-center gap-3">
           <Link
             href={template.useHref}
-            className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#12306a]"
+            className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold !text-white shadow-sm hover:bg-[#12306a]"
+            style={{ color: "#ffffff" }}
           >
-            Build
+            <span className="text-white">Build</span>
           </Link>
           <StatusDot status="ready" label="Available" />
         </div>
       </div>
 
-      <details className="mt-4 border-t border-slate-100 pt-3">
-        <summary className="cursor-pointer text-sm font-semibold text-slate-600">Details</summary>
+      <details className="group mt-4 border-t border-slate-100 pt-3 [&>summary::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-2 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+          <span>Details</span>
+          <span className="text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">
+            &gt;
+          </span>
+        </summary>
         <div className="mt-4 grid gap-5 lg:grid-cols-[0.9fr_1fr]">
           <TemplateSamplePreview />
           <div className="grid content-start gap-3">
@@ -119,26 +128,62 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
   );
 }
 
+const sampleRatios = [
+  { label: "16:9", value: "16 / 9" },
+  { label: "1:1", value: "1 / 1" },
+  { label: "4:5", value: "4 / 5" },
+  { label: "9:16", value: "9 / 16" },
+];
+
 function TemplateSamplePreview() {
+  const [selectedRatio, setSelectedRatio] = useState(sampleRatios[0]);
+
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-[#06153a] p-4 text-white shadow-sm">
-      <div className="mb-4 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-white/70">
-        <span>Official Statement</span>
-        <span>16:9 sample</span>
+    <div className="grid gap-3">
+      <div className="flex flex-wrap gap-2">
+        {sampleRatios.map((ratio) => {
+          const selected = selectedRatio.label === ratio.label;
+
+          return (
+            <button
+              key={ratio.label}
+              type="button"
+              onClick={() => setSelectedRatio(ratio)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                selected
+                  ? "border-[#06153a] bg-[#06153a] text-white"
+                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {ratio.label}
+            </button>
+          );
+        })}
       </div>
-      <div className="grid min-h-44 grid-cols-[1fr_auto] gap-4">
-        <div className="flex flex-col justify-end">
-          <p className="text-2xl font-semibold leading-tight">
-            A short statement appears here.
-          </p>
-          <div className="mt-4">
-            <p className="font-semibold">Speaker Name</p>
-            <p className="text-sm text-white/70">Short supporting title</p>
-            <p className="mt-2 text-xs uppercase tracking-wide text-white/55">Organization Name</p>
+      <div className="grid place-items-center rounded-lg bg-slate-50 p-4">
+        <div
+          className="w-full max-w-md overflow-hidden rounded-lg border border-slate-200 bg-[#06153a] p-4 text-white shadow-sm"
+          style={{ aspectRatio: selectedRatio.value }}
+        >
+          <div className="mb-4 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-white/70">
+            <span>Official Statement</span>
+            <span>{selectedRatio.label}</span>
           </div>
-        </div>
-        <div className="grid h-24 w-24 place-items-center self-end rounded-full border border-white/20 bg-white/10">
-          <span className="text-xs font-semibold uppercase text-white/55">Avatar</span>
+          <div className="grid h-[calc(100%-2rem)] grid-cols-[1fr_auto] gap-4">
+            <div className="flex flex-col justify-end">
+              <p className="text-xl font-semibold leading-tight md:text-2xl">
+                A short statement appears here.
+              </p>
+              <div className="mt-4">
+                <p className="font-semibold">Speaker Name</p>
+                <p className="text-sm text-white/70">Short supporting title</p>
+                <p className="mt-2 text-xs uppercase tracking-wide text-white/55">Organization Name</p>
+              </div>
+            </div>
+            <div className="grid h-16 w-16 place-items-center self-end rounded-full border border-white/20 bg-white/10 sm:h-20 sm:w-20">
+              <span className="text-[10px] font-semibold uppercase text-white/55">Avatar</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
