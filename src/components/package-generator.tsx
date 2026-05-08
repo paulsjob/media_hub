@@ -57,6 +57,7 @@ export function PackageGenerator({
     speakerTitle: initialContent?.speakerTitle ?? getFieldValue(fields, "Speaker Title"),
     contextLine: initialContent?.contextLine ?? getFieldValue(fields, "Context Line"),
     headshot: initialContent?.headshot ?? getFieldValue(fields, "Headshot"),
+    brand: initialContent?.brand ?? "2",
   }));
   const [outputsOpen, setOutputsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -104,6 +105,7 @@ export function PackageGenerator({
         speakerTitle: content.speakerTitle,
         contextLine: content.contextLine,
         headshot: content.headshot,
+        brand: content.brand ?? "2",
       },
       selectedOutputIds: selectedIds,
       mediaReferences: {
@@ -148,6 +150,7 @@ export function PackageGenerator({
       speakerTitle: content.speakerTitle,
       contextLine: content.contextLine,
       headshotFilename: content.headshot,
+      brand: content.brand ?? "2",
       outputs: selectedIds.join(","),
       previewApproved: outputsOpen ? "1" : "0",
       renders: encodeURIComponent(JSON.stringify(renderedOutputs)),
@@ -177,7 +180,7 @@ export function PackageGenerator({
                   return (
                     <HeadshotField
                       key={fieldName}
-                      value={content[key]}
+                      value={content[key] ?? ""}
                       onChange={(value) => updateContent(key, value)}
                     />
                   );
@@ -187,13 +190,13 @@ export function PackageGenerator({
                   <GeneratorField
                     key={fieldName}
                     label={fieldName.replace("Primary ", "")}
-                    value={content[key]}
+                    value={content[key] ?? ""}
                     textarea={fieldName === "Primary Quote"}
                     onChange={(value) => updateContent(key, value)}
                   />
                 );
               })}
-              <BrandControl />
+              <BrandControl value={content.brand} onChange={(value) => updateContent("brand", value)} />
             </div>
           </SectionCard>
         </div>
@@ -262,6 +265,8 @@ async function startLiveModeckRender(content: PreviewContent): Promise<RenderSta
         speakerName: content.speakerName,
         speakerTitle: content.speakerTitle,
         contextLine: content.contextLine,
+        brand: content.brand ?? "2",
+        headshotFilename: getModeckHeadshotFilename(content.headshot),
       }),
     });
     const data = (await response.json()) as RenderStartResult;
@@ -383,10 +388,10 @@ function HeadshotField({
       <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-[#06153a]">Upload headshot</p>
-            <p className="text-xs text-slate-500">Not connected yet. Use the filename field for now.</p>
+            <p className="text-sm font-semibold text-[#06153a]">Media reference</p>
+            <p className="text-xs text-slate-500">Enter a filename available to the renderer. Browser upload is not wired.</p>
           </div>
-          {/* TODO: Wire file upload to media storage and pass the resolved asset filename into preview/render payloads. */}
+          {/* TODO: Add media storage so browser uploads can resolve to a renderer-accessible filename. */}
           <input type="file" accept="image/*" disabled className="text-xs text-slate-400" />
         </div>
       </div>
@@ -424,22 +429,33 @@ function RatioGlyph({
   );
 }
 
-function BrandControl() {
+function BrandControl({
+  value,
+  onChange,
+}: {
+  value?: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <label className="block">
       <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Brand <span className="text-slate-400">Not connected yet</span>
+        Brand
       </span>
-      {/* TODO: Connect brand selection to the MoDeck render/preview payload once the MOGRT brand control is mapped. */}
       <select
-        className="h-12 w-full cursor-not-allowed rounded-md border border-slate-200 bg-slate-50 px-3 text-base text-slate-500"
-        value="default"
-        disabled
+        className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-base text-[#06153a]"
+        value={value ?? "2"}
+        onChange={(event) => onChange(event.target.value)}
       >
-        <option value="default">Default brand</option>
+        <option value="2">Default brand</option>
       </select>
     </label>
   );
+}
+
+function getModeckHeadshotFilename(value: string) {
+  const trimmed = value.trim();
+
+  return /\.[a-z0-9]{2,5}$/i.test(trimmed) ? trimmed : "";
 }
 
 function getOutputTitle(output: MvpOutputFormat) {

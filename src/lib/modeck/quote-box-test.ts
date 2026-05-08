@@ -6,6 +6,8 @@ export interface ModeckQuoteBoxFields {
   speakerName: string;
   speakerTitle: string;
   contextLine: string;
+  brand?: string | number;
+  headshotFilename?: string;
 }
 
 export interface ModeckQuoteBoxOption {
@@ -19,12 +21,19 @@ export function buildQuoteBoxOptions(fields: ModeckQuoteBoxFields): ModeckQuoteB
     { name: "SPEAKER_NAME", value: fields.speakerName },
     { name: "SPEAKER_TITLE", value: fields.speakerTitle },
     { name: "CONTEXT_LINE", value: fields.contextLine },
-    { name: "BRAND", value: 2 },
+    { name: "BRAND", value: normalizeBrand(fields.brand) },
+    ...(fields.headshotFilename ? [{ name: "HEADSHOT", value: fields.headshotFilename }] : []),
     { name: "QUOTE_FONT_SIZE", value: 75 },
     { name: "QUOTE_LINE_SPACING", value: -64 },
     { name: "QUOTE_POSITION_X", value: 200 },
     { name: "QUOTE_POSITION_y", value: 342 },
   ];
+}
+
+function normalizeBrand(value: string | number | undefined) {
+  const parsed = typeof value === "string" ? Number(value) : value;
+
+  return typeof parsed === "number" && Number.isFinite(parsed) ? parsed : 2;
 }
 
 export function getModeckApiConfig() {

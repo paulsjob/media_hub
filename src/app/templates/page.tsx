@@ -2,9 +2,9 @@ import { AppShell } from "@/components/app-shell";
 import { Icon } from "@/components/icons";
 import {
   PageHeader,
-  PrimaryActionButton,
   SectionCard,
 } from "@/components/ui";
+import Link from "next/link";
 
 interface ConnectedTemplate {
   name: string;
@@ -66,9 +66,8 @@ export default function TemplatesPage() {
         subtitle="Start with Quote Card. More templates are planned."
       />
 
-      <div className="mb-5 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+      <div className="mb-5">
         <ConnectedTemplateCard template={quoteCardTemplate} />
-        <FactorySummary />
       </div>
 
       <SectionCard title="Planned Templates" action={<Icon name="template" className="h-5 w-5 text-slate-500" />}>
@@ -94,11 +93,13 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          <Link
+            href={template.useHref}
+            className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#12306a]"
+          >
+            Build
+          </Link>
           <StatusDot status="ready" label="Available" />
-          <PrimaryActionButton href={template.useHref} className="sm:min-w-36">
-            <Icon name="package" />
-            Use Template
-          </PrimaryActionButton>
         </div>
       </div>
 
@@ -141,23 +142,6 @@ function TemplateSamplePreview() {
         </div>
       </div>
     </div>
-  );
-}
-
-function FactorySummary() {
-  return (
-    <aside className="rounded-lg border border-blue-200 bg-blue-50 p-5 text-blue-950">
-      <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Template Factory</p>
-      <h2 className="mt-1 text-xl font-semibold text-[#06153a]">Repeatable media packages</h2>
-      <p className="mt-3 text-sm leading-6">
-        Pick a template, preview the work, then leave with files and copy.
-      </p>
-      <div className="mt-4 grid gap-2 text-sm font-semibold">
-        <span>1 available template</span>
-        <span>5 planned formats</span>
-        <span>Package delivery workflow live</span>
-      </div>
-    </aside>
   );
 }
 

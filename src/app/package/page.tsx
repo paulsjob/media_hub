@@ -12,6 +12,7 @@ export default async function PackagePage({
     speakerTitle?: string;
     contextLine?: string;
     headshotFilename?: string;
+    brand?: string;
     outputs?: string;
     previewApproved?: string;
     renders?: string;
@@ -77,6 +78,7 @@ function getBackToGenerateHref(params: {
   speakerTitle?: string;
   contextLine?: string;
   headshotFilename?: string;
+  brand?: string;
   outputs?: string;
 }) {
   const query = new URLSearchParams();
@@ -86,6 +88,7 @@ function getBackToGenerateHref(params: {
   if (params.speakerTitle) query.set("speakerTitle", params.speakerTitle);
   if (params.contextLine) query.set("contextLine", params.contextLine);
   if (params.headshotFilename) query.set("headshotFilename", params.headshotFilename);
+  if (params.brand) query.set("brand", params.brand);
   if (params.outputs) query.set("outputs", params.outputs);
 
   const firstOutput = params.outputs?.split(",").find(Boolean);

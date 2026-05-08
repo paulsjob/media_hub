@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { Icon } from "@/components/icons";
-import { SecondaryButton, SectionCard } from "@/components/ui";
+import { SecondaryButton } from "@/components/ui";
 import type { MvpOutputFormat } from "@/lib/output-formats";
 
 export interface PackageRenderResult {
@@ -176,7 +177,7 @@ export function PackageResults({
         createNewPackageHref={createNewPackageHref}
       />
 
-      <SectionCard title="Output Previews" action={<Icon name="eye" className="h-5 w-5 text-blue-700" />}>
+      <CollapsibleSection title="Output Previews" icon="eye" defaultOpen>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {outputs.map((output) => (
             <VisualOutputPreviewCard
@@ -193,7 +194,7 @@ export function PackageResults({
             />
           ))}
         </div>
-      </SectionCard>
+      </CollapsibleSection>
 
       <PlatformCopyCard packageContext={packageContext} />
 
@@ -204,7 +205,7 @@ export function PackageResults({
         placeholderFileCount={placeholderFileCount}
       />
 
-      <SectionCard title="Downloads" action={<Icon name="download" className="h-5 w-5 text-blue-700" />}>
+      <CollapsibleSection title="Downloads" icon="download" defaultOpen>
         <DownloadAllPackage
           packageName={packageName}
           files={readyDownloads}
@@ -212,13 +213,10 @@ export function PackageResults({
           downloaded={packageDownloaded}
           onDownloaded={() => setPackageDownloaded(true)}
         />
-      </SectionCard>
+      </CollapsibleSection>
 
-      <details className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <summary className="cursor-pointer text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Output Details
-        </summary>
-        <div className="mt-4 space-y-3">
+      <CollapsibleSection title="Output Details">
+        <div className="space-y-3">
           {outputs.map((output) => (
             <DeliveryOutputCard
               key={output.id}
@@ -234,8 +232,30 @@ export function PackageResults({
             />
           ))}
         </div>
-      </details>
+      </CollapsibleSection>
     </>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  icon,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  icon?: "archive" | "download" | "eye" | "message";
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details open={defaultOpen} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        {icon ? <Icon name={icon} className="h-4 w-4 text-slate-400" /> : null}
+        {title}
+      </summary>
+      <div className="mt-4">{children}</div>
+    </details>
   );
 }
 
@@ -449,7 +469,7 @@ function PlatformCopyCard({
   }
 
   return (
-    <SectionCard title="Platform Copy" action={<Icon name="message" className="h-5 w-5 text-blue-700" />}>
+    <CollapsibleSection title="Platform Copy" icon="message">
       <div className="space-y-2">
         {copyBlocks.map((block) => (
           <div
@@ -476,7 +496,7 @@ function PlatformCopyCard({
           </div>
         ))}
       </div>
-    </SectionCard>
+    </CollapsibleSection>
   );
 }
 
@@ -511,13 +531,8 @@ function ArchiveMetadataCard({
   }
 
   return (
-    <details className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-        <Icon name="archive" className="h-4 w-4 text-slate-400" />
-        Archive Details
-      </summary>
-      <p className="mt-3 text-sm text-slate-500">Local demo details. Not saved.</p>
-      <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_auto]">
+    <CollapsibleSection title="Archive Details" icon="archive">
+      <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
         <div className="grid gap-3 sm:grid-cols-2">
           <MetadataValue label="Package Type" value={metadata.packageType} />
           <MetadataValue label="Status" value={metadata.status} />
@@ -549,7 +564,7 @@ function ArchiveMetadataCard({
           {copiedKey ? <p className="text-sm font-semibold text-emerald-800">Copied to clipboard.</p> : null}
         </div>
       </div>
-    </details>
+    </CollapsibleSection>
   );
 }
 

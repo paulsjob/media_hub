@@ -142,6 +142,7 @@ export function PreviewGrid({
             speakerTitle: content.speakerTitle,
             contextLine: content.contextLine,
             headshotFilename: getModeckHeadshotFilename(content.headshot),
+            brand: content.brand ?? "2",
           }),
           signal: controller.signal,
         });

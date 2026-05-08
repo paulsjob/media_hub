@@ -14,6 +14,7 @@ export default async function GeneratePage({
     speakerTitle?: string;
     contextLine?: string;
     headshotFilename?: string;
+    brand?: string;
     size?: string;
     outputs?: string;
     frame?: string;
@@ -77,6 +78,7 @@ function getInitialContent(params: {
   speakerTitle?: string;
   contextLine?: string;
   headshotFilename?: string;
+  brand?: string;
 }): Partial<PreviewContent> | undefined {
   const content = {
     quote: params.quote,
@@ -84,6 +86,7 @@ function getInitialContent(params: {
     speakerTitle: params.speakerTitle,
     contextLine: params.contextLine,
     headshot: params.headshotFilename,
+    brand: params.brand,
   };
   const entries = Object.entries(content).filter((entry): entry is [keyof PreviewContent, string] => {
     const [, value] = entry;

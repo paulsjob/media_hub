@@ -17,6 +17,8 @@ interface ModeckRenderRequestBody {
   speakerName: string;
   speakerTitle: string;
   contextLine: string;
+  brand: string;
+  headshotFilename: string;
 }
 
 export async function POST(request: Request) {
@@ -49,6 +51,8 @@ export async function POST(request: Request) {
     speakerName: body.speakerName ?? "",
     speakerTitle: body.speakerTitle ?? "",
     contextLine: body.contextLine ?? "",
+    brand: body.brand ?? "2",
+    headshotFilename: body.headshotFilename ?? "",
   };
   const renderName = `${fields.speakerName || "Quote Card"} Package Still 1920x1080`;
   const renderPayload = {

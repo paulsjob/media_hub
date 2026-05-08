@@ -14,6 +14,7 @@ export interface PreviewContent {
   speakerTitle: string;
   contextLine: string;
   headshot: string;
+  brand?: string;
 }
 
 export type PreviewStatusState = "idle" | "updating" | "updated" | "error";

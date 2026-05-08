@@ -10,6 +10,7 @@ interface ModeckPreviewTestRequest {
   speakerTitle: string;
   contextLine: string;
   headshotFilename: string;
+  brand: string;
 }
 
 interface ModeckPreviewOption {
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
   const templateName = body.deck?.trim() || "MoDeck Quote Box Test 002";
   const mogrtName = body.mogrt?.trim() || "MoDeck Quote Box Test 002";
   const headshotFilename = body.headshotFilename?.trim() ?? "";
+  const brand = normalizeBrand(body.brand);
 
   const options: ModeckPreviewOption[] = [
     {
@@ -77,7 +79,7 @@ export async function POST(request: Request) {
     {
       name: "BRAND",
       type: "text",
-      value: 2,
+      value: brand,
     },
     {
       name: "QUOTE_FONT_SIZE",
@@ -208,6 +210,12 @@ function parseSize(value: string) {
     height,
     ratio,
   };
+}
+
+function normalizeBrand(value: string | undefined) {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : 2;
 }
 
 function getRatioLabel(width: number, height: number) {

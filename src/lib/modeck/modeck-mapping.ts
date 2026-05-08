@@ -38,6 +38,12 @@ export const QUOTE_CARD_MODECK_MAPPING: ModeckTemplateMapping = {
       required: true,
     },
     {
+      mediaLabFieldId: "brand",
+      modeckOptionName: "BRAND",
+      optionType: "text",
+      required: false,
+    },
+    {
       mediaLabFieldId: "headshot",
       modeckOptionName: "Headshot",
       optionType: "media_replacement",
