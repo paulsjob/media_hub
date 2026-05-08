@@ -6,12 +6,12 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Media Operations / Guardrails"
+        eyebrow="Majority Democrats / Guardrails"
         title="Brand & Safety"
         accent="Guardrails"
-        subtitle="Make compliance fast, visible, and calm."
+        subtitle="Keep every asset direct, approved, and ready to move."
       />
-      <SectionCard title="All Systems Go">
+      <SectionCard title="Publishing Rules">
         <div className="mb-5 flex flex-wrap gap-3">
           {mediaLab.getSettingsTabs().map((tab, index) => (
             <Chip key={tab} selected={index === 0}>
@@ -21,10 +21,10 @@ export default function SettingsPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {mediaLab.getGuardrailCards().map((item) => (
-            <div key={item} className="rounded-lg border border-slate-200 bg-white p-5">
+            <div key={item} className="border border-[var(--silver)] bg-white p-5">
               <StatusBadge status="approved" />
-              <h2 className="mt-3 font-semibold text-[#06153a]">{item}</h2>
-              <p className="mt-2 text-sm text-slate-600">Active guardrails are applied to generated packages.</p>
+              <h2 className="brand-heading mt-3 text-2xl text-[var(--navy-blue)]">{item}</h2>
+              <p className="mt-2 text-sm text-[var(--black)]">Active rules apply to generated packages.</p>
             </div>
           ))}
         </div>

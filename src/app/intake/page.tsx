@@ -18,10 +18,10 @@ export default function IntakePage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Media Operations / Story Intake"
-        title="Create Story"
-        accent="Record"
-        subtitle="Capture the moment once. Use it everywhere."
+        eyebrow="Majority Democrats / Signal Intake"
+        title="Capture"
+        accent="The Signal"
+        subtitle="Capture the moment once. Turn it into assets that compete everywhere."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
@@ -54,7 +54,7 @@ export default function IntakePage() {
                 </p>
                 <div className="space-y-2">
                   {[story.source_type, "Press release", "Source transcript"].map((receipt) => (
-                    <div key={receipt} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-[#06153a]">
+                    <div key={receipt} className="border border-[var(--silver)] bg-white px-3 py-2 text-sm text-[var(--navy-blue)]">
                       {receipt}
                     </div>
                   ))}
@@ -92,7 +92,7 @@ export default function IntakePage() {
               <div>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Recommended Package</p>
                 <StatusLine label="Quote Card V.2" />
-                <StatusLine label="Clip Packaging Pack" />
+                <StatusLine label="Clip Pack" />
               </div>
               <div>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Ready For</p>
@@ -100,7 +100,7 @@ export default function IntakePage() {
                 <StatusLine label="Messenger identified" />
                 <StatusLine label="Formats selected" />
               </div>
-              <div className="rounded-md border border-slate-200">
+              <div className="border border-[var(--silver)]">
                 {[
                   ["Story Title", story.title],
                   ["Messenger", story.primary_messenger],
@@ -108,13 +108,13 @@ export default function IntakePage() {
                   ["Formats", "Quote Card, Clip Pack"],
                 ].map(([label, value]) => (
                   <div key={label} className="grid grid-cols-[110px_1fr] border-b border-slate-100 px-3 py-3 text-sm last:border-0">
-                    <span className="font-medium text-slate-500">{label}</span>
-                    <span className="font-semibold text-[#06153a]">{value}</span>
+                    <span className="font-medium text-[var(--slate-blue)]">{label}</span>
+                    <span className="font-semibold text-[var(--navy-blue)]">{value}</span>
                   </div>
                 ))}
               </div>
-              <PrimaryActionButton href="/templates">Continue To Package</PrimaryActionButton>
-              <SecondaryButton href="/">Save Draft</SecondaryButton>
+              <PrimaryActionButton href="/templates">Select Template</PrimaryActionButton>
+              <SecondaryButton href="/">Hold Draft</SecondaryButton>
             </div>
           </SectionCard>
         </aside>
@@ -125,8 +125,8 @@ export default function IntakePage() {
 
 function StatusLine({ label }: { label: string }) {
   return (
-    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[#06153a]">
-      <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-100 text-[10px] font-semibold text-emerald-700">
+    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--navy-blue)]">
+      <span className="grid h-5 w-5 place-items-center border border-[var(--navy-blue)] bg-[var(--powder-blue)] text-[10px] font-semibold text-[var(--navy-blue)]">
         OK
       </span>
       {label}

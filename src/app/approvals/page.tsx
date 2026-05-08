@@ -8,22 +8,26 @@ export default function ApprovalsPage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Media Operations / Approval Queue"
+        eyebrow="Majority Democrats / Approval Queue"
         title="Approvals"
-        subtitle="Review, comment, and approve content packages."
+        subtitle="Built for speed. Max two approvals, then package or kill."
       />
       <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-        <SectionCard title="Needs My Review">
+        <SectionCard title="Max 2 Approvals">
           {view ? (
-            <a href={`/library/${view.assetPackage.id}`} className="grid gap-4 rounded-lg border border-orange-100 bg-orange-50/60 p-4 md:grid-cols-[180px_1fr]">
+            <a href={`/library/${view.assetPackage.id}`} className="grid gap-4 border border-[var(--flame)] bg-[var(--powder-blue)] p-4 md:grid-cols-[180px_1fr]">
               <AssetPreview compact />
               <div>
                 <StatusBadge status="needs_review" />
-                <h2 className="mt-3 text-lg font-semibold text-[#06153a]">{view.assetPackage.title}</h2>
-                <p className="text-sm text-slate-600">{view.template.name}</p>
+                <h2 className="mt-3 text-xl font-extrabold text-[var(--navy-blue)]">{view.assetPackage.title}</h2>
+                <p className="text-sm font-bold uppercase tracking-wide text-[var(--slate-blue)]">{view.template.name}</p>
               </div>
             </a>
-          ) : null}
+          ) : (
+            <div className="border border-[var(--silver)] bg-[var(--white)] p-6 font-bold uppercase tracking-wide text-[var(--navy-blue)]">
+              Queue clear. No pending reviews.
+            </div>
+          )}
         </SectionCard>
         <SectionCard title="Review Detail">
           {view ? (
@@ -36,7 +40,7 @@ export default function ApprovalsPage() {
                 <Metric label="Source File" value={String(view.outputFiles.filter((file) => file.file_type === "source").length)} />
               </div>
               <div className="flex flex-wrap gap-3">
-                <PrimaryActionButton href={`/library/${view.assetPackage.id}`}>Approve & Open Asset</PrimaryActionButton>
+                <PrimaryActionButton href={`/library/${view.assetPackage.id}`}>Approve Asset</PrimaryActionButton>
               </div>
             </div>
           ) : null}
@@ -48,9 +52,9 @@ export default function ApprovalsPage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3 text-center">
-      <p className="text-2xl font-semibold text-[#06153a]">{value}</p>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+    <div className="border border-[var(--silver)] bg-white p-3 text-center">
+      <p className="text-3xl font-extrabold text-[var(--navy-blue)]">{value}</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-[var(--slate-blue)]">{label}</p>
     </div>
   );
 }

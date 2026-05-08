@@ -30,13 +30,13 @@ export default async function AssetDetailPage({
   return (
     <AppShell>
       <PageHeader
-        eyebrow={`Library / ${view.template.name}`}
+        eyebrow={`Receipt Vault / ${view.template.name}`}
         title={view.assetPackage.title}
-        subtitle={`${view.template.name} · Created by ${view.creator.name} · Approved package`}
+        subtitle={`${view.template.name} / Created by ${view.creator.name} / Approved package`}
         actions={
           <>
-            <SecondaryButton href="/library">Back To Library</SecondaryButton>
-            <PrimaryActionButton href="/distribution">Prepare For Distribution</PrimaryActionButton>
+            <SecondaryButton href="/library">Back To Vault</SecondaryButton>
+            <PrimaryActionButton href="/distribution">Distribute</PrimaryActionButton>
           </>
         }
       />
@@ -86,7 +86,7 @@ export default async function AssetDetailPage({
               </Chip>
             ))}
           </div>
-          <div className="whitespace-pre-line rounded-md border border-slate-300 bg-white p-4 text-sm leading-7 text-[#06153a]">
+          <div className="whitespace-pre-line border border-[var(--silver)] bg-white p-4 text-sm leading-7 text-[var(--navy-blue)]">
             {xCaption.caption_text}
           </div>
           <div className="mt-4">
@@ -103,7 +103,7 @@ export default async function AssetDetailPage({
         <SectionCard title="Outputs">
           <div className="space-y-2">
             {view.outputFiles.map((file) => (
-              <div key={file.id} className="grid grid-cols-[1fr_110px_120px] items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm">
+              <div key={file.id} className="grid grid-cols-[1fr_110px_120px] items-center gap-3 border border-[var(--silver)] bg-white px-3 py-2 text-sm">
                 <span className="font-semibold text-[#06153a]">
                   {file.ratio} {file.format}
                 </span>
@@ -119,12 +119,12 @@ export default async function AssetDetailPage({
           </div>
         </SectionCard>
 
-        <SectionCard title="Performance Snapshot">
+        <SectionCard title="Attention Snapshot">
           <div className="grid grid-cols-2 gap-4">
-            <Metric label="Total Engagements" value={performance ? "4.2K" : "0"} />
+            <Metric label="Deep Actions" value={performance ? "4.2K" : "0"} />
             <Metric label="Best Format" value="9:16 MP4" />
-            <Metric label="Impressions" value={performance ? "98.6K" : "0"} />
-            <Metric label="Engagement Rate" value={performance ? "4.26%" : "0%"} />
+            <Metric label="Completed Views" value={performance ? "98.6K" : "0"} />
+            <Metric label="Action Rate" value={performance ? "4.26%" : "0%"} />
             <Metric label="Shares" value={performance ? "1.1K" : "0"} />
             <Metric label="Saves" value={performance ? "732" : "0"} />
           </div>
@@ -134,7 +134,7 @@ export default async function AssetDetailPage({
           <div className="space-y-4">
             {view.approvals.map((approval) => (
               <div key={approval.id} className="flex gap-3">
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-600 text-xs font-semibold text-white">
+                <span className="grid h-7 w-7 place-items-center bg-[var(--navy-blue)] text-xs font-bold text-white">
                   OK
                 </span>
                 <div>
@@ -156,9 +156,9 @@ function getField(view: NonNullable<ReturnType<typeof mediaLab.getAssetPackageVi
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="text-2xl font-semibold text-[#06153a]">{value}</p>
+    <div className="border border-[var(--silver)] bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-[var(--slate-blue)]">{label}</p>
+      <p className="text-2xl font-extrabold text-[var(--navy-blue)]">{value}</p>
     </div>
   );
 }

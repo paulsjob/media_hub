@@ -19,7 +19,7 @@ export function TemplatePreviewRenderer({
 
 function PreviewStage({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-100 p-4 sm:p-6">
+    <div className="border border-[var(--silver)] bg-[var(--light-gray)] p-4 sm:p-6">
       <div
         className="mx-auto flex h-[var(--preview-stage-height)] max-w-5xl items-center justify-center overflow-visible"
         style={{ "--preview-stage-height": "clamp(360px, 56vw, 620px)" } as React.CSSProperties}

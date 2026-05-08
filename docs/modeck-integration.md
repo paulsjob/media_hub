@@ -14,7 +14,7 @@ MEDIA LAB works in its own product language and sends a normalized package paylo
 - `packageName`: user-facing package name for tracking and download labeling.
 - `fields`: field values keyed by MEDIA LAB field IDs, such as `quote`, `speakerName`, `speakerTitle`, `contextLine`, and `headshot`.
 - `selectedOutputs`: selected MEDIA LAB output format IDs from the shared output format definitions.
-- `media references`: references to uploaded or selected media assets. These are MEDIA LAB references first, then translated to uploaded MoDeck filenames when media replacement is needed.
+- `media references`: public URLs or renderer-accessible filenames/paths for media replacement fields.
 - `preview request`: one mapped MoDeck preview request per unique selected ratio.
 - `render request`: one mapped MoDeck render request per selected output deliverable.
 
@@ -30,7 +30,7 @@ MoDeck works in render-system terms. The backend adapter will eventually transla
 - `editId`: optional MoDeck edit identifier for continuing or polling an existing edit.
 - `size / ratio`: selected output dimensions and aspect ratio.
 - `preview frame`: still frame requested for preview generation.
-- `uploaded media filename`: filename returned by media upload when media replacement, such as `Headshot`, is used.
+- `media reference`: a public URL or renderer-accessible filename/path for media replacement, such as `HEADSHOT`.
 
 ## C. What Comes Back
 
@@ -65,6 +65,8 @@ The first mapping is Quote Card:
 | `speakerTitle` | `Speaker Title` | text |
 | `contextLine` | `Context Line` | text |
 | `headshot` | `HEADSHOT` | media replacement |
+
+For the MVP, Headshot is a URL-or-filename field. If the value is blank, MEDIA LAB omits `HEADSHOT` and MoDeck uses the default MOGRT media. If the value is a public URL, MEDIA LAB passes it to MoDeck as-is so MoDeck can download it. If the value is a filename or subfolder path, MEDIA LAB passes it to MoDeck as-is; MoDeck resolves it from `MoDeck Sync/_modk-data/User media` and configured additional media folders. Browser file upload is not part of the MVP render path. The optional browser local image picker is only for visual confirmation and crop checking.
 
 Ratio-specific MOGRT names:
 
@@ -161,3 +163,7 @@ Final still delivery currently uses the render-job path: `/render` starts an edi
 The current MEDIA LAB preview adapter requests a target `size` and receives base64 image data, but the code does not yet prove that MoDeck returns final-production dimensions for every still ratio. In observed UI metadata, preview images may be much smaller than final outputs, such as 640x360 for a 16:9 preview, which is useful for review but may be unsuitable as a final 1920x1080 still.
 
 Fast still export should be considered only if MoDeck preview can be requested and verified at final resolution, or if lower-resolution preview quality is acceptable for the specific delivery use case. The final render endpoint may still be required for production-quality media because it exposes completed render media through the job/status/download flow. Keep render-job support as the durable path while evaluating a preview-based still export as an optional fast path.
+
+## L. Future Browser Upload Support
+
+Future browser-upload-to-render support requires a real MoDeck upload or storage API contract that accepts image bytes and returns a render-usable media reference. Until that exists, MEDIA LAB must not claim browser-selected files are render-wired. Browser-selected files stay local to the browser and must not be serialized into package URLs as base64.

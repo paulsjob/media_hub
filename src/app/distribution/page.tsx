@@ -8,25 +8,25 @@ export default function DistributionPage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Library / Prepare for Distribution"
-        title="Prepare for"
-        accent="Distribution"
-        subtitle="Plan approved assets for publishing without auto-posting."
+        eyebrow="Majority Democrats / Distribution"
+        title="Distribute"
+        accent="Everywhere"
+        subtitle="Package approved assets for every native channel without slowing the room down."
       />
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <SectionCard title="Select Platforms">
           <div className="space-y-3">
             {mediaLab.getDistributionPlatforms().map((platform) => (
-              <div key={platform.id} className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[40px_1fr_150px_220px] md:items-center">
-                <input type="checkbox" defaultChecked={platform.selected} className="h-4 w-4 accent-blue-600" />
+              <div key={platform.id} className="grid gap-3 border border-[var(--silver)] bg-white p-4 md:grid-cols-[40px_1fr_150px_220px] md:items-center">
+                <input type="checkbox" defaultChecked={platform.selected} className="h-4 w-4 accent-[var(--flame)]" />
                 <div>
-                  <p className="font-semibold text-[#06153a]">{platform.label}</p>
-                  <p className="text-sm text-slate-500">{platform.ratio}</p>
+                  <p className="font-extrabold text-[var(--navy-blue)]">{platform.label}</p>
+                  <p className="text-sm font-bold uppercase tracking-wide text-[var(--slate-blue)]">{platform.ratio}</p>
                 </div>
-                <span className="rounded-md bg-emerald-50 px-2 py-1 text-center text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                <span className="chip justify-center bg-[var(--powder-blue)] text-[var(--navy-blue)] ring-1 ring-[var(--silver)]">
                   {platform.selected ? "Ready" : "Not selected"}
                 </span>
-                <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" defaultValue={platform.selected ? "May 1, 2026 9:00 AM" : ""} placeholder="Select date & time" />
+                <input className="h-10 border border-[var(--silver)] px-3 text-sm" defaultValue={platform.selected ? "May 1, 2026 9:00 AM" : ""} placeholder="Select date & time" />
               </div>
             ))}
           </div>
@@ -35,7 +35,7 @@ export default function DistributionPage() {
         <aside className="space-y-5">
           <SectionCard title="Asset Summary">
             <AssetPreview compact />
-            <h2 className="mt-4 font-semibold text-[#06153a]">{view?.assetPackage.title}</h2>
+            <h2 className="mt-4 font-extrabold text-[var(--navy-blue)]">{view?.assetPackage.title}</h2>
           </SectionCard>
           <SectionCard title="Publish Summary">
             <div className="space-y-3 text-sm">
@@ -45,7 +45,7 @@ export default function DistributionPage() {
               <Summary label="Scheduled" value="May 1, 2026 at 9:00 AM" />
             </div>
             <div className="mt-5">
-              <PrimaryActionButton href={`/library/${view?.assetPackage.id ?? "pkg-spanberger-town-hall"}`}>Schedule & Export</PrimaryActionButton>
+              <PrimaryActionButton href={`/library/${view?.assetPackage.id ?? "pkg-spanberger-town-hall"}`}>Package Export</PrimaryActionButton>
             </div>
           </SectionCard>
         </aside>
@@ -56,9 +56,9 @@ export default function DistributionPage() {
 
 function Summary({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between border-b border-slate-200 pb-2">
-      <span className="font-medium text-[#06153a]">{label}</span>
-      <span className="text-slate-600">{value}</span>
+    <div className="flex justify-between border-b border-[var(--silver)] pb-2">
+      <span className="font-bold uppercase tracking-wide text-[var(--navy-blue)]">{label}</span>
+      <span className="font-medium text-[var(--slate-blue)]">{value}</span>
     </div>
   );
 }

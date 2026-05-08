@@ -30,10 +30,10 @@ export function RatioPreview({
       data-preview-ratio={ratio.aspectLabel}
       data-preview-width={ratio.width}
       data-preview-height={ratio.height}
-      className="[container-type:inline-size] relative h-full w-full overflow-hidden bg-[#dceeff] text-[#06153a] shadow-sm"
+      className="[container-type:inline-size] relative h-full w-full overflow-hidden bg-[var(--powder-blue)] text-[var(--navy-blue)]"
       style={{
-        borderColor: "#cbd5e1",
-        borderRadius: spec.cornerRadiusPx,
+        borderColor: "var(--silver)",
+        borderRadius: 0,
         borderStyle: "solid",
         borderWidth: spec.borderThicknessPx,
       }}
@@ -55,7 +55,7 @@ export function RatioPreview({
 
       <Box
         spec={spec.headshot}
-        className="grid place-items-center rounded-full border-[clamp(2px,0.45cqw,6px)] border-[#06153a] bg-blue-50 font-bold"
+        className="grid place-items-center border-[clamp(2px,0.45cqw,6px)] border-[var(--navy-blue)] bg-white font-bold"
       >
         {content.headshotPreviewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

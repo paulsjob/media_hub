@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "MEDIA LAB",
-  description: "Internal media operations asset factory",
+  description: "Majority Democrats media command center",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full bg-slate-950 text-slate-950">{children}</body>
+      <body className="min-h-full bg-[var(--light-gray)] text-[var(--black)]">{children}</body>
     </html>
   );
 }

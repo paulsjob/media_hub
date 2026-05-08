@@ -32,13 +32,6 @@ interface RenderStartResult {
   error?: string;
 }
 
-interface HeadshotUploadResult {
-  ok: boolean;
-  mediaReference?: string;
-  uploadedFilename?: string;
-  error?: string;
-}
-
 export function PackageGenerator({
   template,
   fields,
@@ -74,8 +67,6 @@ export function PackageGenerator({
     previewUrl: string;
   } | null>(null);
   const [headshotError, setHeadshotError] = useState("");
-  const [headshotUploadState, setHeadshotUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle");
-  const [uploadedHeadshotReference, setUploadedHeadshotReference] = useState("");
   const [fileInputKey, setFileInputKey] = useState(0);
   const previewContent = useMemo(
     () => ({
@@ -120,9 +111,8 @@ export function PackageGenerator({
     setContent((current) => ({ ...current, [key]: value }));
   }
 
-  async function selectHeadshotFile(file: File | null) {
+  function selectHeadshotFile(file: File | null) {
     setHeadshotError("");
-    setUploadedHeadshotReference("");
 
     setSelectedHeadshot((current) => {
       if (current?.previewUrl) {
@@ -135,7 +125,6 @@ export function PackageGenerator({
 
       if (!file.type.startsWith("image/")) {
         setHeadshotError("Choose an image file.");
-        setHeadshotUploadState("error");
         return null;
       }
 
@@ -144,35 +133,6 @@ export function PackageGenerator({
         previewUrl: URL.createObjectURL(file),
       };
     });
-
-    if (!file) {
-      setHeadshotUploadState("idle");
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      return;
-    }
-
-    setHeadshotUploadState("uploading");
-
-    try {
-      const uploadResult = await uploadHeadshot(file);
-      const mediaReference = uploadResult.mediaReference ?? uploadResult.uploadedFilename ?? "";
-
-      if (!uploadResult.ok || !mediaReference) {
-        setHeadshotUploadState("error");
-        setHeadshotError(uploadResult.error ?? "Headshot upload failed.");
-        return;
-      }
-
-      setUploadedHeadshotReference(mediaReference);
-      setContent((current) => ({ ...current, headshot: mediaReference }));
-      setHeadshotUploadState("ready");
-    } catch (error) {
-      setHeadshotUploadState("error");
-      setHeadshotError(error instanceof Error ? error.message : "Headshot upload failed.");
-    }
   }
 
   function clearHeadshotFile() {
@@ -186,6 +146,7 @@ export function PackageGenerator({
     }
 
     setIsGenerating(true);
+    const headshotReference = getModeckHeadshotFilename(content.headshot);
 
     const renderRequests = mediaLabPayloadToModeckRenderRequest({
       templateId: template.id,
@@ -195,12 +156,12 @@ export function PackageGenerator({
         speakerName: content.speakerName,
         speakerTitle: content.speakerTitle,
         contextLine: content.contextLine,
-        headshot: content.headshot,
+        headshot: headshotReference,
         brand: content.brand ?? "2",
       },
       selectedOutputIds: selectedIds,
       mediaReferences: {
-        headshot: content.headshot,
+        headshot: headshotReference,
       },
     });
 
@@ -240,7 +201,7 @@ export function PackageGenerator({
       speakerName: content.speakerName,
       speakerTitle: content.speakerTitle,
       contextLine: content.contextLine,
-      headshotFilename: content.headshot,
+      headshotFilename: headshotReference,
       brand: content.brand ?? "2",
       outputs: selectedIds.join(","),
       previewApproved: outputsOpen ? "1" : "0",
@@ -263,7 +224,7 @@ export function PackageGenerator({
             />
           </SectionCard>
 
-          <SectionCard title="Required Quote Card Fields" action={<Icon name="sliders" className="h-5 w-5 text-slate-500" />}>
+          <SectionCard title="Template Fields" action={<Icon name="sliders" className="h-5 w-5 text-slate-500" />}>
             <div className="grid gap-4">
               {template.required_fields.map((fieldName) => {
                 const key = fieldMap[fieldName] ?? "quote";
@@ -276,8 +237,6 @@ export function PackageGenerator({
                       selectedFilename={selectedHeadshot?.filename}
                       previewUrl={selectedHeadshot?.previewUrl}
                       errorMessage={headshotError}
-                      uploadState={headshotUploadState}
-                      uploadedReference={uploadedHeadshotReference}
                       fileInputKey={fileInputKey}
                       onFileChange={selectHeadshotFile}
                       onClearFile={clearHeadshotFile}
@@ -301,7 +260,7 @@ export function PackageGenerator({
         </div>
 
         <div className="space-y-4">
-          <SectionCard title="Live Package Preview" action={<Icon name="eye" className="h-5 w-5 text-blue-700" />}>
+          <SectionCard title="Render Preview" action={<Icon name="eye" className="h-5 w-5 text-blue-700" />}>
             <PreviewGrid
               outputs={outputs}
               selectedOutputIds={selectedIds}
@@ -311,19 +270,19 @@ export function PackageGenerator({
             />
           </SectionCard>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm">
+          <div className="border border-[var(--navy-blue)] bg-[var(--powder-blue)] p-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-[#06153a]">Looks good? Continue to package.</p>
+                <p className="font-semibold text-[var(--navy-blue)]">Approve this preview to package the bundle.</p>
               </div>
               {outputsOpen ? (
-                <span className="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-4">
+                <span className="inline-flex min-h-10 items-center justify-center border border-[var(--navy-blue)] bg-white px-4">
                   <StatusPill label="Preview approved" />
                 </span>
               ) : (
                 <ButtonLike variant="primary" onClick={() => setOutputsOpen(true)} className="shrink-0 gap-2">
                   <Icon name="check" />
-                  Looks Good
+                  Approve Preview
                 </ButtonLike>
               )}
             </div>
@@ -335,7 +294,7 @@ export function PackageGenerator({
         <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
           <ButtonLike variant="secondary" onClick={() => setOutputsOpen(false)} className="gap-2">
             <Icon name="sliders" />
-            Back to Edit
+            Edit Fields
           </ButtonLike>
           <ButtonLike
             variant="primary"
@@ -344,7 +303,7 @@ export function PackageGenerator({
             className="gap-2"
           >
             <Icon name="package" />
-            {isGenerating ? "Generating package..." : "Generate Package"}
+            {isGenerating ? "Rendering Package..." : "Render Package"}
           </ButtonLike>
         </div>
       ) : null}
@@ -377,25 +336,6 @@ async function startLiveModeckRender(content: PreviewContent): Promise<RenderSta
       error: error instanceof Error ? error.message : "Render request failed.",
     };
   }
-}
-
-async function uploadHeadshot(file: File): Promise<HeadshotUploadResult> {
-  const formData = new FormData();
-
-  formData.set("file", file);
-
-  const response = await fetch("/api/modeck/media/upload", {
-    method: "POST",
-    body: formData,
-  });
-  const data = (await response.json()) as Partial<HeadshotUploadResult>;
-
-  return {
-    ok: response.ok && data.ok === true,
-    mediaReference: data.mediaReference,
-    uploadedFilename: data.uploadedFilename,
-    error: data.error,
-  };
 }
 
 function GeneratorField({
@@ -495,8 +435,6 @@ function HeadshotField({
   selectedFilename,
   previewUrl,
   errorMessage,
-  uploadState,
-  uploadedReference,
   fileInputKey,
   onFileChange,
   onClearFile,
@@ -506,8 +444,6 @@ function HeadshotField({
   selectedFilename?: string;
   previewUrl?: string;
   errorMessage: string;
-  uploadState: "idle" | "uploading" | "ready" | "error";
-  uploadedReference: string;
   fileInputKey: number;
   onFileChange: (file: File | null) => void;
   onClearFile: () => void;
@@ -517,78 +453,56 @@ function HeadshotField({
       <label className="block">
         <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Headshot</span>
         <input
-          key={fileInputKey}
-          type="file"
-          accept="image/*"
-          onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-[#06153a] file:mr-3 file:min-h-10 file:rounded-md file:border-0 file:bg-[#06153a] file:px-4 file:text-sm file:font-semibold file:text-white hover:file:bg-[#12306a]"
+          className="h-12 w-full rounded-md border border-slate-300 bg-white px-3 text-base text-[#06153a]"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="URL or filename"
         />
       </label>
-      <p className="text-xs text-slate-500">Upload an image or use the default template media.</p>
-
-      {previewUrl ? (
-        <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-3">
-          <div className="h-16 w-16 overflow-hidden rounded-full border border-slate-300 bg-slate-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="Selected headshot" className="h-full w-full object-cover" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[#06153a]">{selectedFilename}</p>
-            <p className={`mt-1 text-xs font-semibold ${getHeadshotUploadClass(uploadState)}`}>
-              {getHeadshotUploadLabel(uploadState)}
-            </p>
-            {uploadedReference ? (
-              <p className="mt-1 truncate text-xs text-slate-400">Media reference: {uploadedReference}</p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={onClearFile}
-            className="inline-flex min-h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
-          >
-            Clear
-          </button>
-        </div>
-      ) : null}
-
+      <p className="text-xs text-slate-500">
+        Use a public image URL or a file in MoDeck Sync/_modk-data/User media.
+      </p>
       {errorMessage ? <p className="text-sm font-semibold text-orange-800">{errorMessage}</p> : null}
 
       <details className="group rounded-md border border-slate-200 bg-white p-3 [&>summary::-webkit-details-marker]:hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-600">
-          <span>Advanced</span>
+          <span>Preview local image</span>
           <span className="text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">
             &gt;
           </span>
         </summary>
-        <label className="mt-3 block">
-          <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Media reference</span>
+        <div className="mt-3 grid gap-3">
+          <p className="text-xs text-slate-500">For checking the crop only. Rendering uses the URL or filename above.</p>
           <input
-            className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-[#06153a]"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
+            key={fileInputKey}
+            type="file"
+            accept="image/*"
+            onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+            className="block w-full text-sm text-[#06153a] file:mr-3 file:min-h-10 file:rounded-md file:border-0 file:bg-white file:px-4 file:text-sm file:font-semibold file:text-[#06153a] hover:file:bg-slate-50"
           />
-        </label>
+          {previewUrl ? (
+            <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <div className="h-16 w-16 overflow-hidden rounded-full border border-slate-300 bg-slate-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewUrl} alt="Selected local headshot preview" className="h-full w-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[#06153a]">{selectedFilename}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Local preview only</p>
+              </div>
+              <button
+                type="button"
+                onClick={onClearFile}
+                className="inline-flex min-h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+              >
+                Clear
+              </button>
+            </div>
+          ) : null}
+        </div>
       </details>
     </div>
   );
-}
-
-function getHeadshotUploadLabel(uploadState: "idle" | "uploading" | "ready" | "error") {
-  return {
-    idle: "Local preview only",
-    uploading: "Uploading...",
-    ready: "Uploaded",
-    error: "Upload unavailable",
-  }[uploadState];
-}
-
-function getHeadshotUploadClass(uploadState: "idle" | "uploading" | "ready" | "error") {
-  return {
-    idle: "text-slate-500",
-    uploading: "text-blue-800",
-    ready: "text-emerald-800",
-    error: "text-orange-800",
-  }[uploadState];
 }
 
 function RatioGlyph({
@@ -645,9 +559,7 @@ function BrandControl({
 }
 
 function getModeckHeadshotFilename(value: string) {
-  const trimmed = value.trim();
-
-  return /\.[a-z0-9]{2,5}$/i.test(trimmed) ? trimmed : "";
+  return value.trim();
 }
 
 function getOutputTitle(output: MvpOutputFormat) {

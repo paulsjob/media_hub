@@ -1,24 +1,34 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #06153a;
-  --navy: #06153a;
-  --navy-soft: #11285a;
-  --orange: #e64a19;
-  --blue: #2563eb;
+  --navy-blue: #111f3f;
+  --slate-blue: #4f6f9f;
+  --powder-blue: #cfe8ff;
+  --flame: #f05a28;
+  --light-gray: #f4f4f1;
+  --silver: #c9c9c3;
+  --black: #000000;
+  --white: #ffffff;
+  --background: var(--light-gray);
+  --foreground: var(--black);
+  --navy: var(--navy-blue);
+  --navy-soft: var(--slate-blue);
+  --orange: var(--flame);
+  --blue: var(--slate-blue);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  border-radius: 0 !important;
 }
 
 body {
   margin: 0;
-  background: #f1f5f9;
+  background: var(--light-gray);
   color: var(--foreground);
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 a {
@@ -31,4 +41,137 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+h1,
+h2,
+h3,
+.brand-heading {
+  color: var(--navy-blue);
+  font-family: "Pathway Extreme", "Pathway Gothic One", "Arial Narrow", Arial, Helvetica, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+button,
+[role="button"],
+a[class*="min-h-"],
+summary {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+}
+
+input,
+select,
+textarea {
+  border-color: var(--silver) !important;
+  background: var(--white) !important;
+  color: var(--black) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--flame) !important;
+  outline-offset: 2px;
+}
+
+.shadow-sm,
+.shadow-lg,
+.shadow-2xl {
+  box-shadow: none !important;
+}
+
+.chip {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--silver);
+  padding: 0.25rem 0.75rem;
+  background: var(--powder-blue);
+  color: var(--navy-blue);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bg-slate-50,
+.bg-slate-100 {
+  background-color: var(--light-gray) !important;
+}
+
+.bg-white {
+  background-color: var(--white) !important;
+}
+
+.bg-blue-50,
+.bg-emerald-50,
+.bg-orange-50 {
+  background-color: var(--powder-blue) !important;
+}
+
+.bg-blue-600,
+.bg-blue-700,
+.bg-emerald-500,
+.bg-emerald-600,
+.bg-emerald-100,
+.bg-\[\#06153a\],
+.bg-\[\#12306a\] {
+  background-color: var(--navy-blue) !important;
+}
+
+.bg-\[\#e64a19\],
+.bg-orange-500,
+.bg-red-500 {
+  background-color: var(--flame) !important;
+}
+
+.text-\[\#06153a\],
+.text-blue-700,
+.text-blue-800,
+.text-emerald-800,
+.text-emerald-900,
+.text-slate-950 {
+  color: var(--navy-blue) !important;
+}
+
+.text-\[\#e64a19\],
+.text-orange-700,
+.text-orange-800,
+.text-red-700 {
+  color: var(--flame) !important;
+}
+
+.text-slate-400,
+.text-slate-500,
+.text-slate-600,
+.text-slate-700 {
+  color: var(--slate-blue) !important;
+}
+
+.border-slate-100,
+.border-slate-200,
+.border-slate-300,
+.border-blue-200,
+.border-blue-300,
+.border-emerald-200,
+.border-emerald-300,
+.border-orange-100 {
+  border-color: var(--silver) !important;
+}
+
+.ring-blue-200,
+.ring-emerald-100,
+.ring-emerald-200,
+.ring-orange-200,
+.ring-slate-200 {
+  --tw-ring-color: var(--silver) !important;
 }

@@ -7,13 +7,13 @@ import type { MvpOutputFormat } from "@/lib/output-formats";
 import type { AssetPackageView, PackageStatus, StoryRecord, Template } from "@/lib/types";
 
 const focusState =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500";
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--flame)]";
 
 const buttonBase =
-  `inline-flex min-h-10 items-center justify-center rounded-md px-4 text-sm font-semibold transition ${focusState}`;
+  `inline-flex min-h-10 items-center justify-center border px-4 text-sm font-bold uppercase tracking-wide transition ${focusState}`;
 
 const chipBase =
-  `inline-flex min-h-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${focusState}`;
+  `chip transition ${focusState}`;
 
 export function PageHeader({
   eyebrow,
@@ -29,15 +29,15 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <div className="mb-8 border-b border-[var(--navy-blue)] pb-5 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div className="max-w-4xl">
         {eyebrow ? (
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-700">{eyebrow}</p>
+          <p className="mb-2 inline-block bg-[var(--powder-blue)] px-2 py-1 text-xs font-bold uppercase tracking-wide text-[var(--navy-blue)]">{eyebrow}</p>
         ) : null}
-        <h1 className="text-3xl font-semibold tracking-tight text-[#06153a] md:text-4xl">
-          {title} {accent ? <span className="text-[#e64a19]">{accent}</span> : null}
+        <h1 className="text-4xl font-extrabold tracking-tight text-[var(--navy-blue)] md:text-6xl">
+          {title} {accent ? <span className="text-[var(--flame)]">{accent}</span> : null}
         </h1>
-        <p className="mt-2 max-w-3xl text-base text-slate-600">{subtitle}</p>
+        <p className="mt-3 max-w-3xl text-base font-medium leading-7 text-[var(--black)]">{subtitle}</p>
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap gap-3">{actions}</div> : null}
     </div>
@@ -56,9 +56,9 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={`rounded-lg border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
-      <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[#06153a]">{title}</h2>
+    <section className={`border border-[var(--silver)] bg-[var(--white)] p-5 ${className}`}>
+      <div className="mb-4 flex items-center justify-between border-b border-[var(--silver)] pb-3">
+        <h2 className="text-sm font-extrabold uppercase tracking-wide text-[var(--navy-blue)]">{title}</h2>
         {action}
       </div>
       {children}
@@ -84,11 +84,11 @@ export function CollapsibleSection({
   return (
     <details
       open={defaultOpen}
-      className={`group rounded-lg border border-slate-200 bg-white shadow-sm [&>summary::-webkit-details-marker]:hidden ${
+      className={`group border border-[var(--silver)] bg-[var(--white)] [&>summary::-webkit-details-marker]:hidden ${
         compact ? "p-3" : "p-5"
       } ${className}`}
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold uppercase tracking-wide text-[var(--navy-blue)]">
         <span>{title}</span>
         <span className="flex shrink-0 items-center gap-3">
           {rightContent}
@@ -114,14 +114,14 @@ export type StatusPillLabel =
 
 export function StatusPill({ label }: { label: StatusPillLabel }) {
   const toneClass = {
-    Ready: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-    Downloaded: "bg-emerald-100 text-emerald-900 ring-emerald-200",
-    "Preview ready": "bg-emerald-50 text-emerald-800 ring-emerald-200",
-    "Preview approved": "bg-emerald-50 text-emerald-800 ring-emerald-200",
-    Rendering: "bg-blue-50 text-blue-800 ring-blue-200",
-    "Not connected": "bg-slate-100 text-slate-700 ring-slate-200",
-    "Render unavailable": "bg-orange-50 text-orange-800 ring-orange-200",
-    "File unavailable": "bg-orange-50 text-orange-800 ring-orange-200",
+    Ready: "bg-[var(--powder-blue)] text-[var(--navy-blue)] ring-[var(--silver)]",
+    Downloaded: "bg-[var(--navy-blue)] text-white ring-[var(--navy-blue)]",
+    "Preview ready": "bg-[var(--powder-blue)] text-[var(--navy-blue)] ring-[var(--silver)]",
+    "Preview approved": "bg-[var(--navy-blue)] text-white ring-[var(--navy-blue)]",
+    Rendering: "bg-[var(--powder-blue)] text-[var(--navy-blue)] ring-[var(--silver)]",
+    "Not connected": "bg-[var(--light-gray)] text-[var(--slate-blue)] ring-[var(--silver)]",
+    "Render unavailable": "bg-[var(--flame)] text-white ring-[var(--flame)]",
+    "File unavailable": "bg-[var(--flame)] text-white ring-[var(--flame)]",
   }[label];
 
   const iconName = {
@@ -136,7 +136,7 @@ export function StatusPill({ label }: { label: StatusPillLabel }) {
   }[label] as "check" | "refresh" | "warning";
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ring-1 ${toneClass}`}>
+    <span className={`chip gap-1.5 ring-1 ${toneClass}`}>
       <Icon name={iconName} className="h-3.5 w-3.5" />
       {label}
     </span>
@@ -158,7 +158,7 @@ export function PrimaryButton({
     return (
       <span
         aria-disabled="true"
-        className={`${buttonBase} cursor-not-allowed gap-2 bg-slate-300 !text-white ${className}`}
+        className={`${buttonBase} cursor-not-allowed gap-2 border-[var(--silver)] bg-[var(--silver)] !text-white ${className}`}
       >
         <span className="text-white">{children}</span>
         <span className="text-white" aria-hidden="true">
@@ -171,7 +171,7 @@ export function PrimaryButton({
   return (
     <Link
       href={href}
-      className={`${buttonBase} gap-2 bg-[#06153a] !text-white shadow-sm hover:bg-[#12306a] hover:!text-white active:bg-[#020b21] active:!text-white ${className}`}
+      className={`${buttonBase} gap-2 border-[var(--flame)] bg-[var(--flame)] !text-white hover:border-[var(--navy-blue)] hover:bg-[var(--navy-blue)] hover:!text-white active:bg-[var(--navy-blue)] active:!text-white ${className}`}
       style={{ color: "#ffffff" }}
     >
       <span className="text-white">{children}</span>
@@ -194,7 +194,7 @@ export function SecondaryButton({
   return (
     <Link
       href={href}
-      className={`${buttonBase} border border-slate-300 bg-white text-[#06153a] hover:border-slate-400 hover:bg-slate-50 active:bg-slate-100 ${className}`}
+      className={`${buttonBase} border-[var(--navy-blue)] bg-[var(--white)] text-[var(--navy-blue)] hover:border-[var(--flame)] hover:text-[var(--flame)] active:bg-[var(--light-gray)] ${className}`}
     >
       {children}
     </Link>
@@ -213,7 +213,7 @@ export function GhostButton({
   return (
     <Link
       href={href}
-      className={`${buttonBase} bg-transparent text-[#06153a] hover:bg-slate-100 active:bg-slate-200 ${className}`}
+      className={`${buttonBase} border-transparent bg-transparent text-[var(--navy-blue)] hover:border-[var(--flame)] hover:text-[var(--flame)] active:bg-[var(--light-gray)] ${className}`}
     >
       {children}
     </Link>
@@ -237,10 +237,10 @@ export function ButtonLike({
 }) {
   const variantClass =
     variant === "primary"
-      ? "bg-[#06153a] !text-white hover:bg-[#12306a] hover:!text-white active:bg-[#020b21] active:!text-white"
+      ? "border-[var(--flame)] bg-[var(--flame)] !text-white hover:border-[var(--navy-blue)] hover:bg-[var(--navy-blue)] hover:!text-white active:bg-[var(--navy-blue)] active:!text-white"
       : variant === "ghost"
-        ? "bg-transparent text-[#06153a] hover:bg-slate-100 active:bg-slate-200"
-        : "border border-slate-300 bg-white text-[#06153a] hover:border-slate-400 hover:bg-slate-50 active:bg-slate-100";
+        ? "border-transparent bg-transparent text-[var(--navy-blue)] hover:border-[var(--flame)] hover:text-[var(--flame)] active:bg-[var(--light-gray)]"
+        : "border-[var(--navy-blue)] bg-[var(--white)] text-[var(--navy-blue)] hover:border-[var(--flame)] hover:text-[var(--flame)] active:bg-[var(--light-gray)]";
 
   return (
     <button
@@ -259,14 +259,14 @@ export const PrimaryActionButton = PrimaryButton;
 
 export function MvpShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-6 text-[#06153a]">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-10 flex items-center justify-between border-b border-slate-200 pb-5">
-          <Link href="/" className="text-2xl font-semibold tracking-tight text-[#06153a]">
+    <main className="min-h-screen bg-[var(--light-gray)] px-5 py-6 text-[var(--black)]">
+      <div className="mx-auto max-w-[1024px]">
+        <header className="mb-10 flex items-center justify-between border-b border-[var(--navy-blue)] pb-5">
+          <Link href="/" className="brand-heading text-3xl font-extrabold tracking-tight text-[var(--navy-blue)]">
             MEDIA LAB
           </Link>
-          <Link href="/templates" className="text-sm font-medium text-slate-500 hover:text-[#06153a]">
-            Platform preview
+          <Link href="/templates" className="text-sm font-bold uppercase tracking-wide text-[var(--slate-blue)] hover:text-[var(--flame)]">
+            Approved Templates
           </Link>
         </header>
         {children}

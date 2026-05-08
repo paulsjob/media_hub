@@ -30,14 +30,14 @@ export default async function GeneratePage({
     <MvpShell>
       <div className="mb-8 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
         <div>
-          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-blue-700">
+          <p className="mb-2 inline-block bg-[var(--powder-blue)] px-2 py-1 text-sm font-bold uppercase tracking-wide text-[var(--navy-blue)]">
             Production / Quote Card
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-[#06153a] md:text-4xl">
-            Quote Card Package Generator
+          <h1 className="text-4xl font-extrabold tracking-tight text-[var(--navy-blue)] md:text-6xl">
+            Render Quote Card
           </h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Select outputs, fill fields, preview, and generate a package.
+          <p className="mt-3 max-w-2xl text-base font-medium leading-7 text-[var(--black)]">
+            Input structured data to render this asset bundle.
           </p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -49,8 +49,8 @@ export default async function GeneratePage({
       </div>
 
       {startedFromPreviewTest ? (
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-          <p className="font-semibold">Started from diagnostic preview</p>
+        <div className="mb-6 border border-[var(--silver)] bg-[var(--powder-blue)] p-4 text-sm text-[var(--navy-blue)]">
+          <p className="font-bold uppercase tracking-wide">Started from preview check</p>
           <p className="mt-1">
             Template: {preview.template.name} {preview.template.version} / Status: Connected
           </p>

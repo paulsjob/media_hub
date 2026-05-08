@@ -13,17 +13,17 @@ export default async function LibraryPage({
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Media Operations / Library Search"
-        title="Asset"
-        accent="Library"
-        subtitle="Search, filter, and reuse approved content packages."
+        eyebrow="Majority Democrats / Receipt Vault"
+        title="Receipt"
+        accent="Vault"
+        subtitle="Search approved assets, transcripts, tags, topics, and reusable winning frames."
       />
-      <SectionCard title="Global Asset Search">
+      <SectionCard title="Vault Search">
         <form className="mb-5 grid gap-3 md:grid-cols-[1fr_repeat(3,150px)_120px]">
           <input
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+            className="h-10 border border-[var(--silver)] bg-white px-3 text-sm"
             name="q"
-            placeholder="Search assets, speakers, topics..."
+            placeholder="Search assets, leaders, topics..."
             defaultValue={q}
           />
           {mediaLab.getLibraryFilters().map((filter) => (
@@ -32,14 +32,14 @@ export default async function LibraryPage({
             </ButtonLike>
           ))}
           <ButtonLike type="submit" variant="primary">
-            Search
+            Find
           </ButtonLike>
         </form>
         <div className="space-y-3">
           {packageViews.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
-              <h2 className="font-semibold text-[#06153a]">No assets found</h2>
-              <p className="mt-2 text-sm text-slate-600">Try a speaker, template, topic, or package status.</p>
+            <div className="border border-[var(--silver)] bg-white p-8 text-center">
+              <h2 className="font-extrabold text-[var(--navy-blue)]">No assets found</h2>
+              <p className="mt-2 text-sm font-medium text-[var(--slate-blue)]">Try a leader, template, topic, or package status.</p>
             </div>
           ) : null}
           {packageViews.map((view) => (

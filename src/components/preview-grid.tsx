@@ -272,8 +272,8 @@ export function PreviewGrid({
           </div>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-          <p className="font-semibold text-[#06153a]">Choose at least one output to preview and generate.</p>
+        <div className="border border-dashed border-[var(--silver)] bg-[var(--light-gray)] p-8 text-center">
+          <p className="font-bold uppercase tracking-wide text-[var(--navy-blue)]">Select at least one output to render.</p>
         </div>
       )}
     </div>
@@ -300,22 +300,22 @@ function ModeckPreviewPanel({
   if (!imageSrc) {
     return (
       <div
-        className={`grid min-h-[360px] place-items-center rounded-lg border border-dashed p-8 text-center text-sm ${
+        className={`grid min-h-[360px] place-items-center border border-dashed p-8 text-center text-sm ${
           state === "loading"
             ? "border-blue-200 bg-blue-50 text-blue-900"
             : "border-slate-300 bg-slate-50 text-slate-600"
         }`}
       >
         <div>
-          <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-white shadow-sm">
+          <div className="mx-auto mb-4 grid h-12 w-12 place-items-center border border-[var(--silver)] bg-white">
             <span
-              className={`h-3 w-3 rounded-full ${state === "loading" ? "animate-pulse bg-blue-500" : "bg-orange-500"}`}
+              className={`h-3 w-3 ${state === "loading" ? "animate-pulse bg-[var(--navy-blue)]" : "bg-[var(--flame)]"}`}
               aria-hidden="true"
             />
           </div>
-          <div className="mb-1 flex items-center justify-center gap-2 font-semibold text-[#06153a]">
+          <div className="mb-1 flex items-center justify-center gap-2 font-bold uppercase tracking-wide text-[var(--navy-blue)]">
             <span
-              className={`h-2 w-2 rounded-full ${state === "loading" ? "bg-blue-500" : "bg-orange-500"}`}
+              className={`h-2 w-2 ${state === "loading" ? "bg-[var(--navy-blue)]" : "bg-[var(--flame)]"}`}
               aria-hidden="true"
             />
             {state === "loading" ? "Rendering" : "Preview ready"}
@@ -326,7 +326,7 @@ function ModeckPreviewPanel({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-300 bg-slate-950">
+    <div className="overflow-hidden border border-[var(--navy-blue)] bg-[var(--navy-blue)]">
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-3 py-2 text-xs text-slate-200">
         <span className="font-semibold uppercase tracking-wide">
           {state === "loading" ? "Rendering" : "Preview ready"}
@@ -336,19 +336,19 @@ function ModeckPreviewPanel({
           {typeof durationMs === "number" ? ` / ${durationMs}ms` : ""}
         </span>
       </div>
-      <div className="relative grid min-h-[360px] place-items-center bg-[linear-gradient(45deg,#1e293b_25%,transparent_25%),linear-gradient(-45deg,#1e293b_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1e293b_75%),linear-gradient(-45deg,transparent_75%,#1e293b_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] p-4">
+      <div className="relative grid min-h-[360px] place-items-center bg-[var(--light-gray)] p-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imageSrc}
           alt="Quote card preview"
           onLoad={(event) => onImageLoad(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)}
-          className={`block max-h-[560px] max-w-full rounded-sm border border-slate-700 bg-white object-contain shadow-2xl transition-opacity ${
+          className={`block max-h-[560px] max-w-full border border-[var(--navy-blue)] bg-white object-contain transition-opacity ${
             state === "loading" ? "opacity-55" : "opacity-100"
           }`}
         />
         {state === "loading" ? (
           <div className="absolute inset-0 grid place-items-center bg-slate-950/20">
-            <div className="rounded-md bg-slate-950/90 px-4 py-2 text-sm font-semibold text-white shadow-lg">
+            <div className="border border-white bg-[var(--navy-blue)] px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
               Rendering
             </div>
           </div>
@@ -359,7 +359,7 @@ function ModeckPreviewPanel({
           href={imageSrc}
           target="_blank"
           rel="noreferrer"
-          className="rounded-md border border-slate-600 px-3 py-1.5 font-semibold text-white hover:bg-slate-800"
+          className="border border-[var(--silver)] px-3 py-1.5 font-bold uppercase tracking-wide text-white hover:bg-[var(--slate-blue)]"
         >
           Open image
         </a>
@@ -385,9 +385,7 @@ function toImageSrc(value: string) {
 }
 
 function getModeckHeadshotFilename(value: string) {
-  const trimmed = value.trim();
-
-  return /\.[a-z0-9]{2,5}$/i.test(trimmed) ? trimmed : "";
+  return value.trim();
 }
 
 function outputToPreviewOption(output: MvpOutputFormat) {

@@ -10,22 +10,22 @@ export function Sidebar() {
   const navItems = mediaLab.getNavigationItems();
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col bg-[#06153a] p-5 text-white lg:flex">
+    <aside className="hidden w-60 shrink-0 flex-col bg-[var(--navy-blue)] p-5 text-white lg:flex">
       <Link
         href="/"
-        className="mb-7 grid h-11 w-11 place-items-center rounded-md border border-white/40 text-sm font-semibold transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+        className="mb-7 grid h-11 w-11 place-items-center border border-white text-sm font-extrabold transition hover:bg-white hover:text-[var(--navy-blue)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--flame)]"
       >
         ML
       </Link>
       <Link
         href="/intake"
-        className="mb-6 flex h-11 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold !text-white shadow-sm transition hover:bg-blue-700 hover:!text-white active:bg-blue-800 active:!text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+        className="mb-6 flex h-11 items-center justify-center gap-2 border border-[var(--flame)] bg-[var(--flame)] px-4 text-sm font-bold uppercase tracking-wide !text-white transition hover:border-white hover:bg-[var(--navy-blue)] hover:!text-white active:bg-[var(--navy-blue)] active:!text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--flame)]"
         style={{ color: "#ffffff" }}
       >
         <span className="text-lg text-white" aria-hidden="true">
           +
         </span>
-        New Intake
+        New Signal
       </Link>
       <nav className="flex flex-1 flex-col gap-1">
         {navItems.map((item) => {
@@ -44,9 +44,9 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="rounded-md border border-white/15 p-4 text-xs text-white/70">
-        <p className="mb-1 font-semibold text-white">Need help?</p>
-        <p>Visit the operator guide</p>
+      <div className="border border-white/25 p-4 text-xs font-bold uppercase tracking-wide text-white/70">
+        <p className="mb-1 text-white">Run the engine.</p>
+        <p>Scale what works.</p>
       </div>
     </aside>
   );

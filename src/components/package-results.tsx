@@ -315,9 +315,9 @@ function PreviewFrame({
   thumbnailUrl: string;
 }) {
   return (
-    <div className="grid min-h-56 place-items-center rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <div className="grid min-h-56 place-items-center border border-[var(--silver)] bg-[var(--light-gray)] p-4">
       <div
-        className="relative grid w-full max-w-full place-items-center overflow-hidden rounded-md border border-slate-300 bg-white text-center shadow-sm"
+        className="relative grid w-full max-w-full place-items-center overflow-hidden border border-[var(--silver)] bg-white text-center"
         style={{
           aspectRatio: `${output.width} / ${output.height}`,
           maxHeight: output.aspectLabel === "9:16" ? "20rem" : output.aspectLabel === "4:5" ? "18rem" : "13rem",
@@ -328,7 +328,7 @@ function PreviewFrame({
         }}
       >
         {thumbnailUrl ? null : (
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,#f8fafc_0%,#eef2ff_100%)]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-[var(--powder-blue)]" aria-hidden="true" />
         )}
         <div className="relative grid gap-1 px-4">
           <p className="text-lg font-semibold text-[#06153a]">{output.aspectLabel}</p>
@@ -416,28 +416,29 @@ function PackageReviewHeader({
   );
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="border border-[var(--navy-blue)] bg-white p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-[#06153a]">Quote Card Package</h1>
+            <h1 className="brand-heading text-4xl text-[var(--navy-blue)]">One Story. Many Expressions.</h1>
             <StatusPill label="Ready" />
           </div>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--black)]">Create once. Distribute everywhere.</p>
         </div>
         <div className="flex flex-wrap gap-3 sm:justify-end">
           <SecondaryButton href={changeOutputsHref} className="gap-2">
             <Icon name="sliders" />
-            Edit Package
+            Edit Bundle
           </SecondaryButton>
           <SecondaryButton href={createNewPackageHref} className="gap-2">
             <Icon name="refresh" />
-            Create New Package
+            New Render
           </SecondaryButton>
         </div>
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+        <div className="grid gap-3 border border-[var(--silver)] bg-[var(--light-gray)] p-4 sm:grid-cols-2">
           <SummaryValue label="Speaker" value={packageContext.speakerName} />
           <SummaryValue label="Title" value={packageContext.speakerTitle} />
           <SummaryValue label="Context" value={packageContext.contextLine} />
@@ -451,8 +452,8 @@ function PackageReviewHeader({
         </div>
       </div>
 
-      <div className="mt-5 rounded-lg border border-slate-200 p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Review Checklist</p>
+      <div className="mt-5 border border-[var(--silver)] p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--slate-blue)]">Review Checklist</p>
         <div className="grid gap-2 sm:grid-cols-2">
           <ChecklistItem checked={requiredFieldsCompleted} label="Required fields completed" />
           <ChecklistItem checked={packageContext.previewApproved} label="Preview approved" />
