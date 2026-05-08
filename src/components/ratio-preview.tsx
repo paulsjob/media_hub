@@ -57,9 +57,14 @@ export function RatioPreview({
         spec={spec.headshot}
         className="grid place-items-center rounded-full border-[clamp(2px,0.45cqw,6px)] border-[#06153a] bg-blue-50 font-bold"
       >
-        <span style={{ fontSize: "clamp(13px, 3.1cqw, 34px)", lineHeight: 1 }}>
-          {content.headshot ? content.headshot.slice(0, 2).toUpperCase() : "HS"}
-        </span>
+        {content.headshotPreviewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={content.headshotPreviewUrl} alt="Selected headshot" className="h-full w-full object-cover" />
+        ) : (
+          <span style={{ fontSize: "clamp(13px, 3.1cqw, 34px)", lineHeight: 1 }}>
+            {content.headshot ? content.headshot.slice(0, 2).toUpperCase() : "HS"}
+          </span>
+        )}
       </Box>
 
       <TextBox spec={spec.speakerName} className="font-bold uppercase tracking-[0.04em]">

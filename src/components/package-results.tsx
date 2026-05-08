@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { Icon } from "@/components/icons";
-import { SecondaryButton } from "@/components/ui";
+import { CollapsibleSection, SecondaryButton, StatusPill } from "@/components/ui";
+import type { StatusPillLabel } from "@/components/ui";
 import type { MvpOutputFormat } from "@/lib/output-formats";
 
 export interface PackageRenderResult {
@@ -135,7 +135,7 @@ export function PackageResults({
                 errorMessage:
                   response.ok
                     ? data.errorMessage ?? current[render.outputId]?.errorMessage
-                    : "Could not refresh MoDeck render status.",
+                    : "Could not refresh render status.",
               },
             }));
           } catch (error) {
@@ -148,8 +148,8 @@ export function PackageResults({
               [render.outputId]: {
                 ...current[render.outputId],
                 status: "failed",
-                errorMessage:
-                  error instanceof Error ? error.message : "Could not refresh MoDeck render status.",
+              errorMessage:
+                  error instanceof Error ? error.message : "Could not refresh render status.",
               },
             }));
           }
@@ -195,15 +195,6 @@ export function PackageResults({
         </div>
       </CollapsibleSection>
 
-      <PlatformCopyCard packageContext={packageContext} />
-
-      <ArchiveMetadataCard
-        packageContext={packageContext}
-        outputs={outputs}
-        readyFileCount={readyFileCount}
-        placeholderFileCount={placeholderFileCount}
-      />
-
       <CollapsibleSection title="Downloads" defaultOpen>
         <DownloadAllPackage
           packageName={packageName}
@@ -213,6 +204,15 @@ export function PackageResults({
           onDownloaded={() => setPackageDownloaded(true)}
         />
       </CollapsibleSection>
+
+      <PlatformCopyCard packageContext={packageContext} />
+
+      <ArchiveMetadataCard
+        packageContext={packageContext}
+        outputs={outputs}
+        readyFileCount={readyFileCount}
+        placeholderFileCount={placeholderFileCount}
+      />
 
       <CollapsibleSection title="Output Details">
         <div className="space-y-3">
@@ -233,28 +233,6 @@ export function PackageResults({
         </div>
       </CollapsibleSection>
     </>
-  );
-}
-
-function CollapsibleSection({
-  title,
-  defaultOpen = false,
-  children,
-}: {
-  title: string;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <details open={defaultOpen} className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm [&>summary::-webkit-details-marker]:hidden">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-        <span>{title}</span>
-        <span className="text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">
-          &gt;
-        </span>
-      </summary>
-      <div className="mt-4">{children}</div>
-    </details>
   );
 }
 
@@ -306,7 +284,7 @@ function VisualOutputPreviewCard({
           </p>
           <h3 className="mt-1 font-semibold text-[#06153a]">{output.aspectLabel}</h3>
         </div>
-        <StateBadge state={downloaded ? "Downloaded" : state} />
+        <StatusPill label={downloaded ? "Downloaded" : getStateLabel(state)} />
       </div>
 
       <PreviewFrame output={output} state={state} thumbnailUrl={thumbnailUrl} />
@@ -314,24 +292,13 @@ function VisualOutputPreviewCard({
       {previewHelp ? <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{previewHelp}</p> : <div className="flex-1" />}
 
       <div className="mt-4">
-        {canDownload ? (
-          <button
-            type="button"
-            onClick={downloadFile}
-            className={`inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm font-semibold ${
-              downloaded
-                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
-            }`}
-          >
-            <Icon name={downloaded ? "check" : "download"} />
-            {downloaded ? "Downloaded" : "Download"}
-          </button>
-        ) : (
-          <span className="inline-flex min-h-10 w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-500">
-            {getUnavailableActionLabel(state)}
-          </span>
-        )}
+        <OutputDownloadAction
+          canDownload={canDownload}
+          downloaded={downloaded}
+          unavailableLabel={getUnavailableActionLabel(state)}
+          onClick={downloadFile}
+          fullWidth
+        />
         {downloadError ? <p className="mt-2 text-sm font-semibold text-orange-800">{downloadError}</p> : null}
       </div>
     </article>
@@ -374,6 +341,47 @@ function PreviewFrame({
   );
 }
 
+function OutputDownloadAction({
+  canDownload,
+  downloaded,
+  unavailableLabel,
+  onClick,
+  fullWidth = false,
+}: {
+  canDownload: boolean;
+  downloaded: boolean;
+  unavailableLabel: string;
+  onClick: () => void;
+  fullWidth?: boolean;
+}) {
+  const widthClass = fullWidth ? "w-full" : "";
+
+  if (!canDownload) {
+    return (
+      <span
+        className={`inline-flex min-h-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-500 ${widthClass}`}
+      >
+        {unavailableLabel}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-semibold ${
+        downloaded
+          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+          : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
+      } ${widthClass}`}
+    >
+      <Icon name={downloaded ? "check" : "download"} />
+      {downloaded ? "Downloaded" : "Download"}
+    </button>
+  );
+}
+
 function PackageReviewHeader({
   packageContext,
   outputs,
@@ -413,7 +421,7 @@ function PackageReviewHeader({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl font-semibold tracking-tight text-[#06153a]">Quote Card Package</h1>
-            <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">Ready</span>
+            <StatusPill label="Ready" />
           </div>
         </div>
         <div className="flex flex-wrap gap-3 sm:justify-end">
@@ -549,7 +557,7 @@ function ArchiveMetadataCard({
           <MetadataValue label="Selected Outputs" value={selectedOutputText} className="sm:col-span-2" />
           <MetadataValue label="Ready Files" value={String(metadata.readyFiles)} />
           <MetadataValue label="Not Connected" value={String(metadata.placeholderFiles)} />
-          <MetadataValue label="Generated Date" value={metadata.generatedDate} className="sm:col-span-2" />
+          <MetadataValue label="Created" value={metadata.generatedDate} className="sm:col-span-2" />
           <MetadataValue label="Suggested Package ID" value={metadata.suggestedPackageId} className="sm:col-span-2" />
           <MetadataValue label="Suggested Filename Stem" value={metadata.suggestedFilenameStem} className="sm:col-span-2" />
           <MetadataValue label="Suggested Tags" value={metadata.suggestedTags.join(", ")} className="sm:col-span-2" />
@@ -680,7 +688,7 @@ function getArchiveMetadata(
 
   return {
     packageType: "Quote Card",
-    status: "Generated / Ready for review",
+    status: "Ready",
     speaker: packageContext.speakerName?.trim() || "Not provided",
     speakerTitle: packageContext.speakerTitle?.trim() || "Not provided",
     context: packageContext.contextLine?.trim() || "Not provided",
@@ -892,8 +900,8 @@ function DownloadAllPackage({
         <p className="mt-1 text-sm text-slate-600">
           {readyCount > 0
             ? includesPlaceholders
-              ? "Includes ready files and available placeholders."
-              : "Rendering or failed files are skipped."
+              ? "Includes ready files and connected previews."
+              : "Rendering or unavailable files are skipped."
             : "Available when at least one output is ready."}
         </p>
         {downloaded ? <p className="mt-2 text-sm font-semibold text-emerald-800">Package downloaded.</p> : null}
@@ -917,7 +925,7 @@ function DownloadAllPackage({
         style={{ color: "#ffffff" }}
       >
         <Icon name={downloaded ? "check" : "download"} />
-        <span className="text-white">{isDownloading ? "Preparing Package..." : buttonLabel}</span>
+        <span className="text-white">{isDownloading ? "Preparing package..." : buttonLabel}</span>
       </button>
     </div>
   );
@@ -969,7 +977,7 @@ function DeliveryOutputCard({
           <p className="font-semibold text-[#06153a]">
             {output.type === "video" ? "Video" : "Still"} - {output.label}
           </p>
-          <StateBadge state={downloaded ? "Downloaded" : state} />
+          <StatusPill label={downloaded ? "Downloaded" : getStateLabel(state)} />
         </div>
         <p className="mt-1 text-sm text-slate-500">{getStateHelp(state)}</p>
         {result?.editId ? (
@@ -990,26 +998,12 @@ function DeliveryOutputCard({
         ) : null}
       </div>
       <div className="flex flex-col gap-2 md:items-end">
-        {canDownload ? (
-          <>
-            <button
-              type="button"
-              onClick={downloadFile}
-              className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-semibold ${
-                downloaded
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                  : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
-              }`}
-            >
-              <Icon name={downloaded ? "check" : "download"} />
-              {downloaded ? "Downloaded" : "Download"}
-            </button>
-          </>
-        ) : (
-          <span className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-500">
-            {getUnavailableActionLabel(state)}
-          </span>
-        )}
+        <OutputDownloadAction
+          canDownload={canDownload}
+          downloaded={downloaded}
+          unavailableLabel={getUnavailableActionLabel(state)}
+          onClick={downloadFile}
+        />
         {downloadError ? <p className="text-sm font-semibold text-orange-800">{downloadError}</p> : null}
       </div>
     </div>
@@ -1069,38 +1063,12 @@ function getDeliveryState(result?: PackageRenderResult): DeliveryState {
   return "Ready";
 }
 
-function StateBadge({ state }: { state: DeliveryState | "Downloaded" }) {
-  const className = {
-    Ready: "bg-emerald-50 text-emerald-800",
-    Downloaded: "bg-emerald-100 text-emerald-900",
-    Rendering: "bg-blue-50 text-blue-800",
-    Placeholder: "bg-slate-100 text-slate-700",
-    Unavailable: "bg-orange-50 text-orange-800",
-    Failed: "bg-orange-50 text-orange-800",
-  }[state];
-  const iconName = {
-    Ready: "check",
-    Downloaded: "check",
-    Rendering: "refresh",
-    Placeholder: "warning",
-    Unavailable: "warning",
-    Failed: "warning",
-  }[state] as "check" | "refresh" | "warning";
-
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ${className}`}>
-      <Icon name={iconName} className="h-3.5 w-3.5" />
-      {getStateLabel(state)}
-    </span>
-  );
-}
-
-function getStateLabel(state: DeliveryState | "Downloaded") {
+function getStateLabel(state: DeliveryState): StatusPillLabel {
   if (state === "Placeholder") {
     return "Not connected";
   }
 
-  if (state === "Unavailable") {
+  if (state === "Unavailable" || state === "Failed") {
     return "Render unavailable";
   }
 
@@ -1129,11 +1097,11 @@ function getPreviewHelp(state: DeliveryState) {
 
 function getUnavailableActionLabel(state: DeliveryState) {
   return {
-    Ready: "Unavailable",
-    Rendering: "Waiting",
-    Placeholder: "Not available",
+    Ready: "File unavailable",
+    Rendering: "Rendering",
+    Placeholder: "File unavailable",
     Unavailable: "File unavailable",
-    Failed: "Failed",
+    Failed: "File unavailable",
   }[state];
 }
 

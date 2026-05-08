@@ -3,7 +3,6 @@ import { Icon } from "@/components/icons";
 import { MvpShell, SecondaryButton } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
 import type { PreviewContent } from "@/lib/preview-state";
-import Link from "next/link";
 
 export default async function GeneratePage({
   searchParams,
@@ -46,9 +45,6 @@ export default async function GeneratePage({
             <Icon name="template" />
             Change Template
           </SecondaryButton>
-          <Link href="/dev/modeck-preview-test" className="text-xs font-semibold text-slate-400 hover:text-slate-600">
-            Diagnostics
-          </Link>
         </div>
       </div>
 
@@ -123,13 +119,5 @@ function hasPreviewTestParams(params: {
   size?: string;
   frame?: string;
 }) {
-  return Boolean(
-    params.quote ??
-      params.speakerName ??
-      params.speakerTitle ??
-      params.contextLine ??
-      params.headshotFilename ??
-      params.size ??
-      params.frame,
-  );
+  return Boolean(params.frame);
 }

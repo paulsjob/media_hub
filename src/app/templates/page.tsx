@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Icon } from "@/components/icons";
 import {
+  CollapsibleSection,
   PageHeader,
   SectionCard,
 } from "@/components/ui";
@@ -107,13 +108,7 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
         </div>
       </div>
 
-      <details className="group mt-4 border-t border-slate-100 pt-3 [&>summary::-webkit-details-marker]:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-2 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-          <span>Details</span>
-          <span className="text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">
-            &gt;
-          </span>
-        </summary>
+      <CollapsibleSection title="Details" compact className="mt-4 border-slate-100 bg-transparent shadow-none">
         <div className="mt-4 grid gap-5 lg:grid-cols-[0.9fr_1fr]">
           <TemplateSamplePreview />
           <div className="grid content-start gap-3">
@@ -123,7 +118,7 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
             <TemplateText title="Note" value="Brand and media controls are being connected in the production workflow." />
           </div>
         </div>
-      </details>
+      </CollapsibleSection>
     </article>
   );
 }

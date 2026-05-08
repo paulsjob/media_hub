@@ -45,9 +45,9 @@ export const QUOTE_CARD_MODECK_MAPPING: ModeckTemplateMapping = {
     },
     {
       mediaLabFieldId: "headshot",
-      modeckOptionName: "Headshot",
+      modeckOptionName: "HEADSHOT",
       optionType: "media_replacement",
-      required: true,
+      required: false,
     },
   ],
   mogrtMappings: [

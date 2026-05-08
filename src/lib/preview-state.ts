@@ -14,6 +14,7 @@ export interface PreviewContent {
   speakerTitle: string;
   contextLine: string;
   headshot: string;
+  headshotPreviewUrl?: string;
   brand?: string;
 }
 

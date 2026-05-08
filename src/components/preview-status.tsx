@@ -1,10 +1,10 @@
 import type { PreviewStatusState } from "@/lib/preview-state";
 
 const labels: Record<PreviewStatusState, string> = {
-  idle: "Template live",
-  updating: "Template live",
-  updated: "Template live",
-  error: "Preview unavailable",
+  idle: "Preview ready",
+  updating: "Rendering",
+  updated: "Preview ready",
+  error: "Render unavailable",
 };
 
 export function PreviewStatus({ status = "updated" }: { status?: PreviewStatusState }) {

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { PreviewGrid } from "@/components/preview-grid";
 import {
   ButtonLike,
   SectionCard,
+  StatusPill,
 } from "@/components/ui";
 import { mediaLabPayloadToModeckRenderRequest } from "@/lib/modeck/modeck-mapping";
 import { mockModeckAdapter } from "@/lib/modeck/mock-modeck-adapter";
@@ -61,6 +62,27 @@ export function PackageGenerator({
   }));
   const [outputsOpen, setOutputsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedHeadshot, setSelectedHeadshot] = useState<{
+    filename: string;
+    previewUrl: string;
+  } | null>(null);
+  const [headshotError, setHeadshotError] = useState("");
+  const [fileInputKey, setFileInputKey] = useState(0);
+  const previewContent = useMemo(
+    () => ({
+      ...content,
+      headshotPreviewUrl: selectedHeadshot?.previewUrl,
+    }),
+    [content, selectedHeadshot],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (selectedHeadshot?.previewUrl) {
+        URL.revokeObjectURL(selectedHeadshot.previewUrl);
+      }
+    };
+  }, [selectedHeadshot]);
 
   function toggleOutput(id: string) {
     setSelectedIds((current) => {
@@ -87,6 +109,35 @@ export function PackageGenerator({
 
   function updateContent(key: keyof PreviewContent, value: string) {
     setContent((current) => ({ ...current, [key]: value }));
+  }
+
+  function selectHeadshotFile(file: File | null) {
+    setHeadshotError("");
+
+    setSelectedHeadshot((current) => {
+      if (current?.previewUrl) {
+        URL.revokeObjectURL(current.previewUrl);
+      }
+
+      if (!file) {
+        return null;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        setHeadshotError("Choose an image file.");
+        return null;
+      }
+
+      return {
+        filename: file.name,
+        previewUrl: URL.createObjectURL(file),
+      };
+    });
+  }
+
+  function clearHeadshotFile() {
+    selectHeadshotFile(null);
+    setFileInputKey((current) => current + 1);
   }
 
   async function generatePackage() {
@@ -182,6 +233,12 @@ export function PackageGenerator({
                       key={fieldName}
                       value={content[key] ?? ""}
                       onChange={(value) => updateContent(key, value)}
+                      selectedFilename={selectedHeadshot?.filename}
+                      previewUrl={selectedHeadshot?.previewUrl}
+                      errorMessage={headshotError}
+                      fileInputKey={fileInputKey}
+                      onFileChange={selectHeadshotFile}
+                      onClearFile={clearHeadshotFile}
                     />
                   );
                 }
@@ -207,7 +264,7 @@ export function PackageGenerator({
               outputs={outputs}
               selectedOutputIds={selectedIds}
               activeOutputId={activeOutputId}
-              content={content}
+              content={previewContent}
               onActiveOutputChange={setActiveOutputId}
             />
           </SectionCard>
@@ -218,8 +275,8 @@ export function PackageGenerator({
                 <p className="font-semibold text-[#06153a]">Looks good? Continue to package.</p>
               </div>
               {outputsOpen ? (
-                <span className="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800">
-                  Preview approved.
+                <span className="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-4">
+                  <StatusPill label="Preview approved" />
                 </span>
               ) : (
                 <ButtonLike variant="primary" onClick={() => setOutputsOpen(true)} className="shrink-0 gap-2">
@@ -275,7 +332,7 @@ async function startLiveModeckRender(content: PreviewContent): Promise<RenderSta
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "MoDeck render request failed.",
+      error: error instanceof Error ? error.message : "Render request failed.",
     };
   }
 }
@@ -374,23 +431,74 @@ function OutputSelector({
 function HeadshotField({
   value,
   onChange,
+  selectedFilename,
+  previewUrl,
+  errorMessage,
+  fileInputKey,
+  onFileChange,
+  onClearFile,
 }: {
   value: string;
   onChange: (value: string) => void;
+  selectedFilename?: string;
+  previewUrl?: string;
+  errorMessage: string;
+  fileInputKey: number;
+  onFileChange: (file: File | null) => void;
+  onClearFile: () => void;
 }) {
   return (
-    <div className="grid gap-3">
-      <GeneratorField label="Headshot" value={value} onChange={onChange} />
-      <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[#06153a]">Media reference</p>
-            <p className="text-xs text-slate-500">Enter a filename available to the renderer. Browser upload is not wired.</p>
+    <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <label className="block">
+        <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Headshot</span>
+        <input
+          key={fileInputKey}
+          type="file"
+          accept="image/*"
+          onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+          className="block w-full text-sm text-[#06153a] file:mr-3 file:min-h-10 file:rounded-md file:border-0 file:bg-[#06153a] file:px-4 file:text-sm file:font-semibold file:text-white hover:file:bg-[#12306a]"
+        />
+      </label>
+      <p className="text-xs text-slate-500">Upload an image or use the default template media.</p>
+
+      {previewUrl ? (
+        <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-3">
+          <div className="h-16 w-16 overflow-hidden rounded-full border border-slate-300 bg-slate-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl} alt="Selected headshot" className="h-full w-full object-cover" />
           </div>
-          {/* TODO: Add media storage so browser uploads can resolve to a renderer-accessible filename. */}
-          <input type="file" accept="image/*" disabled className="text-xs text-slate-400" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-[#06153a]">{selectedFilename}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-500">Local preview only</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClearFile}
+            className="inline-flex min-h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+          >
+            Clear
+          </button>
         </div>
-      </div>
+      ) : null}
+
+      {errorMessage ? <p className="text-sm font-semibold text-orange-800">{errorMessage}</p> : null}
+
+      <details className="group rounded-md border border-slate-200 bg-white p-3 [&>summary::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-600">
+          <span>Advanced</span>
+          <span className="text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">
+            &gt;
+          </span>
+        </summary>
+        <label className="mt-3 block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Media reference</span>
+          <input
+            className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-[#06153a]"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </label>
+      </details>
     </div>
   );
 }

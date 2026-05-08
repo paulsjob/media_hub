@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { Icon } from "@/components/icons";
 import { getStatusDefinition } from "@/lib/constants";
 import type { MvpOutputFormat } from "@/lib/output-formats";
 import type { AssetPackageView, PackageStatus, StoryRecord, Template } from "@/lib/types";
@@ -61,6 +63,83 @@ export function SectionCard({
       </div>
       {children}
     </section>
+  );
+}
+
+export function CollapsibleSection({
+  title,
+  defaultOpen = false,
+  children,
+  rightContent,
+  compact = false,
+  className = "",
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+  rightContent?: ReactNode;
+  compact?: boolean;
+  className?: string;
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className={`group rounded-lg border border-slate-200 bg-white shadow-sm [&>summary::-webkit-details-marker]:hidden ${
+        compact ? "p-3" : "p-5"
+      } ${className}`}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <span>{title}</span>
+        <span className="flex shrink-0 items-center gap-3">
+          {rightContent}
+          <span className="text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">
+            &gt;
+          </span>
+        </span>
+      </summary>
+      <div className={compact ? "mt-3" : "mt-4"}>{children}</div>
+    </details>
+  );
+}
+
+export type StatusPillLabel =
+  | "Ready"
+  | "Rendering"
+  | "Render unavailable"
+  | "File unavailable"
+  | "Downloaded"
+  | "Not connected"
+  | "Preview ready"
+  | "Preview approved";
+
+export function StatusPill({ label }: { label: StatusPillLabel }) {
+  const toneClass = {
+    Ready: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+    Downloaded: "bg-emerald-100 text-emerald-900 ring-emerald-200",
+    "Preview ready": "bg-emerald-50 text-emerald-800 ring-emerald-200",
+    "Preview approved": "bg-emerald-50 text-emerald-800 ring-emerald-200",
+    Rendering: "bg-blue-50 text-blue-800 ring-blue-200",
+    "Not connected": "bg-slate-100 text-slate-700 ring-slate-200",
+    "Render unavailable": "bg-orange-50 text-orange-800 ring-orange-200",
+    "File unavailable": "bg-orange-50 text-orange-800 ring-orange-200",
+  }[label];
+
+  const iconName = {
+    Ready: "check",
+    Downloaded: "check",
+    "Preview ready": "check",
+    "Preview approved": "check",
+    Rendering: "refresh",
+    "Not connected": "warning",
+    "Render unavailable": "warning",
+    "File unavailable": "warning",
+  }[label] as "check" | "refresh" | "warning";
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ring-1 ${toneClass}`}>
+      <Icon name={iconName} className="h-3.5 w-3.5" />
+      {label}
+    </span>
   );
 }
 
@@ -525,23 +604,25 @@ export function DownloadRow({
   const isLiveModeckRender = source === "modeck-render";
   const isLiveModeckPreview = source === "modeck-preview";
   const isRenderable = !isLiveModeckRender || status === "completed";
-  const deliveryState =
+  const deliveryState: StatusPillLabel =
     status === "failed" || status === "canceled"
-      ? "Failed"
+      ? "Render unavailable"
       : isLiveModeckRender
         ? status === "completed"
           ? "Ready"
           : "Rendering"
         : source === "mock-placeholder"
-          ? "Placeholder"
+          ? "Not connected"
           : "Ready";
   const fileKind = isLiveModeckRender
     ? output.type === "still"
-      ? "Final MoDeck PNG"
-      : "Final MoDeck video"
+      ? "Final PNG"
+      : "Final video"
     : isLiveModeckPreview
-      ? "Live MoDeck PNG"
-      : `Placeholder ${output.type === "still" ? "SVG" : "MP4"}`;
+      ? "Preview PNG"
+      : output.type === "still"
+        ? "Preview SVG"
+        : "Preview MP4";
 
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -550,31 +631,14 @@ export function DownloadRow({
           <p className="font-semibold text-[#06153a]">
             {output.type === "still" ? "Still" : "Video"} - {output.label}
           </p>
-          <span
-            className={`rounded-md px-2 py-1 text-xs font-semibold ${
-              deliveryState === "Ready"
-                ? "bg-emerald-50 text-emerald-800"
-                : deliveryState === "Rendering"
-                  ? "bg-blue-50 text-blue-800"
-                  : deliveryState === "Failed"
-                    ? "bg-orange-50 text-orange-800"
-                    : "bg-slate-100 text-slate-700"
-            }`}
-          >
-            {deliveryState}
-          </span>
+          <StatusPill label={deliveryState} />
         </div>
         <p className="text-sm text-slate-500">
           {output.aspectLabel} - {fileKind}
         </p>
         {editId ? (
           <p className="mt-1 text-xs text-slate-400">
-            {isLiveModeckRender
-              ? "MoDeck edit ID"
-              : isLiveModeckPreview
-                ? "Preview render ID"
-                : "Placeholder edit ID"}
-            : {editId}
+            Version ID: {editId}
           </p>
         ) : null}
         {isLiveModeckRender ? (
@@ -593,8 +657,8 @@ export function DownloadRow({
                   ? "PNG ready"
                   : "Video ready"
                 : status === "failed" || status === "canceled"
-                  ? errorMessage ?? "MoDeck render did not complete."
-                  : `MoDeck render ${status ?? "queued"}...`}
+                  ? errorMessage ?? "Render unavailable."
+                  : "Rendering"}
             </p>
           </div>
         ) : errorMessage ? (
@@ -607,7 +671,7 @@ export function DownloadRow({
         </SecondaryButton>
       ) : (
         <span className="shrink-0 rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-500">
-          Rendering
+          File unavailable
         </span>
       )}
     </div>
