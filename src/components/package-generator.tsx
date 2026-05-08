@@ -236,6 +236,9 @@ export function PackageGenerator({
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             <SecondaryButton href="/templates">Change Template</SecondaryButton>
+            <ButtonLike variant="secondary" onClick={() => setOutputsOpen(false)}>
+              Back to Edit
+            </ButtonLike>
             <ButtonLike
               variant="primary"
               onClick={generatePackage}
