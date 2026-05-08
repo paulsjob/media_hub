@@ -175,6 +175,28 @@ export function PackageResults({
         createAnotherVersionHref={createAnotherVersionHref}
       />
 
+      <SectionCard title="Selected Output Previews">
+        <p className="mb-4 text-sm leading-6 text-slate-600">
+          Scan the package formats at a glance. Placeholder frames show the selected ratio when the final MoDeck template is not connected yet.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {outputs.map((output) => (
+            <VisualOutputPreviewCard
+              key={output.id}
+              output={output}
+              result={renderResults[output.id]}
+              downloaded={downloadedOutputIds.includes(output.id)}
+              packageName={packageName}
+              onDownloaded={() =>
+                setDownloadedOutputIds((current) =>
+                  current.includes(output.id) ? current : [...current, output.id],
+                )
+              }
+            />
+          ))}
+        </div>
+      </SectionCard>
+
       <ArchiveMetadataCard
         packageContext={packageContext}
         outputs={outputs}
@@ -240,6 +262,113 @@ export function PackageResults({
         </div>
       </SectionCard>
     </>
+  );
+}
+
+function VisualOutputPreviewCard({
+  output,
+  result,
+  downloaded,
+  packageName,
+  onDownloaded,
+}: {
+  output: MvpOutputFormat;
+  result?: PackageRenderResult;
+  downloaded: boolean;
+  packageName: string;
+  onDownloaded: () => void;
+}) {
+  const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
+  const state = getDeliveryState(result);
+  const canDownload = Boolean(resolvedDownloadUrl) && (result?.source !== "modeck-render" || result.status === "completed");
+  const thumbnailUrl = getPreviewThumbnailUrl(output, result, resolvedDownloadUrl, state);
+
+  async function downloadFile() {
+    if (!canDownload) {
+      return;
+    }
+
+    await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output, result?.source));
+    onDownloaded();
+  }
+
+  return (
+    <article
+      className={`flex h-full flex-col rounded-lg border bg-white p-4 ${
+        downloaded ? "border-emerald-300 ring-1 ring-emerald-100" : "border-slate-200"
+      }`}
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {output.type === "video" ? "Video" : "Still"}
+          </p>
+          <h3 className="mt-1 font-semibold text-[#06153a]">{output.aspectLabel}</h3>
+        </div>
+        <StateBadge state={downloaded ? "Downloaded" : state} />
+      </div>
+
+      <PreviewFrame output={output} state={state} thumbnailUrl={thumbnailUrl} />
+
+      <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{getPreviewHelp(state)}</p>
+
+      <div className="mt-4">
+        {canDownload ? (
+          <button
+            type="button"
+            onClick={downloadFile}
+            className={`inline-flex min-h-10 w-full items-center justify-center rounded-md border px-4 text-sm font-semibold ${
+              downloaded
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
+            }`}
+          >
+            {downloaded ? "OK Downloaded" : "Download"}
+          </button>
+        ) : (
+          <span className="inline-flex min-h-10 w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-500">
+            {state}
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function PreviewFrame({
+  output,
+  state,
+  thumbnailUrl,
+}: {
+  output: MvpOutputFormat;
+  state: DeliveryState;
+  thumbnailUrl: string;
+}) {
+  return (
+    <div className="grid min-h-56 place-items-center rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div
+        className="relative grid w-full max-w-full place-items-center overflow-hidden rounded-md border border-slate-300 bg-white text-center shadow-sm"
+        style={{
+          aspectRatio: `${output.width} / ${output.height}`,
+          maxHeight: output.aspectLabel === "9:16" ? "20rem" : output.aspectLabel === "4:5" ? "18rem" : "13rem",
+          backgroundImage: thumbnailUrl ? `url("${thumbnailUrl}")` : undefined,
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "contain",
+        }}
+      >
+        {thumbnailUrl ? null : (
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,#f8fafc_0%,#eef2ff_100%)]" aria-hidden="true" />
+        )}
+        <div className="relative grid gap-1 px-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {state === "Placeholder" ? "Placeholder" : state}
+          </p>
+          <p className="text-lg font-semibold text-[#06153a]">{output.aspectLabel}</p>
+          <p className="text-xs text-slate-500">{output.type === "video" ? "Video output" : "Still output"}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -916,6 +1045,32 @@ function getStateHelp(state: DeliveryState) {
     Placeholder: "Placeholder file, final MoDeck template not connected yet.",
     Failed: "Render did not complete.",
   }[state];
+}
+
+function getPreviewHelp(state: DeliveryState) {
+  return {
+    Ready: "Ready final output.",
+    Rendering: "Rendering final output.",
+    Placeholder: "Placeholder output, final MoDeck template not connected yet.",
+    Failed: "Render did not complete.",
+  }[state];
+}
+
+function getPreviewThumbnailUrl(
+  output: MvpOutputFormat,
+  result: PackageRenderResult | undefined,
+  resolvedDownloadUrl: string,
+  state: DeliveryState,
+) {
+  if (output.type !== "still" || state !== "Ready" || !resolvedDownloadUrl) {
+    return "";
+  }
+
+  if (result?.source === "mock-placeholder") {
+    return "";
+  }
+
+  return resolvedDownloadUrl;
 }
 
 async function downloadUrl(url: string, filename: string) {
