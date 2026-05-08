@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/icons";
 import { PreviewGrid } from "@/components/preview-grid";
 import {
   ButtonLike,
@@ -160,7 +161,7 @@ export function PackageGenerator({
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] xl:items-start">
         <div className="space-y-4">
-          <SectionCard title="Select Package Outputs" className="p-4">
+          <SectionCard title="Select Package Outputs" className="p-4" action={<Icon name="sliders" className="h-5 w-5 text-blue-700" />}>
             <OutputSelector
               outputs={outputs}
               selectedIds={selectedIds}
@@ -169,7 +170,7 @@ export function PackageGenerator({
             />
           </SectionCard>
 
-          <SectionCard title="Required Quote Card Fields">
+          <SectionCard title="Required Quote Card Fields" action={<Icon name="sliders" className="h-5 w-5 text-slate-500" />}>
             <div className="grid gap-4">
               {template.required_fields.map((fieldName) => {
                 const key = fieldMap[fieldName] ?? "quote";
@@ -188,7 +189,7 @@ export function PackageGenerator({
         </div>
 
         <div className="space-y-4">
-          <SectionCard title="Live Package Preview">
+          <SectionCard title="Live Package Preview" action={<Icon name="eye" className="h-5 w-5 text-blue-700" />}>
             <PreviewGrid
               outputs={outputs}
               selectedOutputIds={selectedIds}
@@ -208,7 +209,8 @@ export function PackageGenerator({
                   Preview approved. Package actions unlocked.
                 </span>
               ) : (
-                <ButtonLike variant="primary" onClick={() => setOutputsOpen(true)} className="shrink-0">
+                <ButtonLike variant="primary" onClick={() => setOutputsOpen(true)} className="shrink-0 gap-2">
+                  <Icon name="check" />
                   Approve Preview
                 </ButtonLike>
               )}
@@ -219,7 +221,7 @@ export function PackageGenerator({
 
       {outputsOpen ? (
         <>
-          <SectionCard title="Ready to Generate">
+          <SectionCard title="Ready to Generate" action={<Icon name="package" className="h-5 w-5 text-blue-700" />}>
             <div className="flex flex-wrap gap-2">
               {outputs
                 .filter((output) => selectedIds.includes(output.id))
@@ -236,14 +238,17 @@ export function PackageGenerator({
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             <SecondaryButton href="/templates">Change Template</SecondaryButton>
-            <ButtonLike variant="secondary" onClick={() => setOutputsOpen(false)}>
+            <ButtonLike variant="secondary" onClick={() => setOutputsOpen(false)} className="gap-2">
+              <Icon name="sliders" />
               Back to Edit
             </ButtonLike>
             <ButtonLike
               variant="primary"
               onClick={generatePackage}
               disabled={selectedIds.length === 0 || isGenerating}
+              className="gap-2"
             >
+              <Icon name="package" />
               {isGenerating ? "Generating package..." : "Generate Review Package"}
             </ButtonLike>
           </div>

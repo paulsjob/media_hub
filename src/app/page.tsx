@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { Icon } from "@/components/icons";
 import {
   PageHeader,
   PrimaryActionButton,
@@ -35,14 +36,20 @@ export default function HomePage() {
         subtitle="Generate, review, package, and reuse campaign-ready media assets from one repeatable workflow."
         actions={
           <>
-            <PrimaryActionButton href="/templates">Browse Templates</PrimaryActionButton>
-            <SecondaryButton href="/generate">Start Quote Card</SecondaryButton>
+            <PrimaryActionButton href="/templates">
+              <Icon name="template" />
+              Browse Templates
+            </PrimaryActionButton>
+            <SecondaryButton href="/generate">
+              <Icon name="package" />
+              Start Quote Card
+            </SecondaryButton>
           </>
         }
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <SectionCard title="Current MVP Flow">
+        <SectionCard title="Current MVP Flow" action={<Icon name="dashboard" className="h-5 w-5 text-blue-700" />}>
           <div className="grid gap-3">
             {workingFlow.map((step, index) => (
               <div key={step} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
@@ -56,7 +63,7 @@ export default function HomePage() {
         </SectionCard>
 
         <div className="grid gap-5">
-          <SectionCard title="Demo Factory Status">
+          <SectionCard title="Demo Factory Status" action={<Icon name="package" className="h-5 w-5 text-blue-700" />}>
             <div className="grid gap-3 sm:grid-cols-2">
               <DashboardMetric label="Connected templates" value="1" />
               <DashboardMetric label="Planned templates" value="5" />
@@ -68,7 +75,7 @@ export default function HomePage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Template Status">
+          <SectionCard title="Template Status" action={<Icon name="template" className="h-5 w-5 text-blue-700" />}>
             <div className="space-y-2">
               {templateStatuses.map((template) => (
                 <div

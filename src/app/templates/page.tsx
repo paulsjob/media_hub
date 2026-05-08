@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { Icon } from "@/components/icons";
 import {
   PageHeader,
   PrimaryActionButton,
@@ -74,7 +75,7 @@ export default function TemplatesPage() {
         <FactorySummary />
       </div>
 
-      <SectionCard title="Planned Template Roadmap">
+      <SectionCard title="Planned Template Roadmap" action={<Icon name="template" className="h-5 w-5 text-slate-500" />}>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {plannedTemplates.map((template) => (
             <PlannedTemplateCard key={template.name} template={template} />
@@ -96,7 +97,7 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
             Use this connected workflow to turn a quote into reviewed files, platform copy, and archive-ready metadata.
           </p>
         </div>
-        <StatusPill label={template.status} tone="success" />
+        <StatusPill label={template.status} tone="success" icon="check" />
       </div>
 
       <div className="grid flex-1 gap-4 lg:grid-cols-2">
@@ -108,6 +109,7 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
 
       <div className="mt-5 border-t border-slate-100 pt-4">
         <PrimaryActionButton href={template.useHref} className="sm:min-w-40">
+          <Icon name="package" />
           Use Quote Card
         </PrimaryActionButton>
       </div>
@@ -141,7 +143,7 @@ function PlannedTemplateCard({ template }: { template: PlannedTemplate }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Future Template</p>
           <h3 className="mt-1 text-lg font-semibold text-[#06153a]">{template.name}</h3>
         </div>
-        <StatusPill label="Planned" tone="neutral" />
+        <StatusPill label="Planned" tone="neutral" icon="warning" />
       </div>
       <TemplateText title="Best For" value={template.bestFor} />
       <div className="mt-4 flex-1">
@@ -179,9 +181,11 @@ function TemplateList({ title, items }: { title: string; items: string[] }) {
 function StatusPill({
   label,
   tone,
+  icon,
 }: {
   label: string;
   tone: "success" | "info" | "neutral";
+  icon?: "check" | "warning";
 }) {
   const toneClass = {
     success: "bg-emerald-50 text-emerald-800 ring-emerald-200",
@@ -189,7 +193,12 @@ function StatusPill({
     neutral: "bg-slate-100 text-slate-700 ring-slate-200",
   }[tone];
 
-  return <span className={`rounded-md px-2 py-1 text-xs font-semibold ring-1 ${toneClass}`}>{label}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ring-1 ${toneClass}`}>
+      {icon ? <Icon name={icon} className="h-3.5 w-3.5" /> : null}
+      {label}
+    </span>
+  );
 }
 
 function DisabledAction({
@@ -200,8 +209,9 @@ function DisabledAction({
   return (
     <span
       aria-disabled="true"
-      className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-400 sm:min-w-36"
+      className="inline-flex min-h-10 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-400 sm:min-w-36"
     >
+      <Icon name="warning" />
       {children}
     </span>
   );

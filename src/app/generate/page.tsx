@@ -1,4 +1,5 @@
 import { PackageGenerator } from "@/components/package-generator";
+import { Icon } from "@/components/icons";
 import { MvpShell, SecondaryButton } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
 import type { PreviewContent } from "@/lib/preview-state";
@@ -39,8 +40,14 @@ export default async function GeneratePage({
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <SecondaryButton href="/templates">Change Template</SecondaryButton>
-          <SecondaryButton href="/dev/modeck-preview-test">Open Dev Preview Harness</SecondaryButton>
+          <SecondaryButton href="/templates" className="gap-2">
+            <Icon name="template" />
+            Change Template
+          </SecondaryButton>
+          <SecondaryButton href="/dev/modeck-preview-test" className="gap-2">
+            <Icon name="eye" />
+            Open Dev Preview Harness
+          </SecondaryButton>
         </div>
       </div>
 

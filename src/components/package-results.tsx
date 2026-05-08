@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Icon } from "@/components/icons";
 import { SecondaryButton, SectionCard } from "@/components/ui";
 import type { MvpOutputFormat } from "@/lib/output-formats";
 
@@ -175,7 +176,7 @@ export function PackageResults({
         createAnotherVersionHref={createAnotherVersionHref}
       />
 
-      <SectionCard title="Selected Output Previews">
+      <SectionCard title="Selected Output Previews" action={<Icon name="eye" className="h-5 w-5 text-blue-700" />}>
         <p className="mb-4 text-sm leading-6 text-slate-600">
           Scan the package formats at a glance. Placeholder frames show the selected ratio when the final MoDeck template is not connected yet.
         </p>
@@ -206,7 +207,7 @@ export function PackageResults({
 
       <PlatformCopyCard packageContext={packageContext} />
 
-      <SectionCard title="Download Ready Files">
+      <SectionCard title="Download Ready Files" action={<Icon name="download" className="h-5 w-5 text-blue-700" />}>
         <DownloadAllPackage
           packageName={packageName}
           files={readyDownloads}
@@ -216,7 +217,7 @@ export function PackageResults({
         />
       </SectionCard>
 
-      <SectionCard title="Selected Stills">
+      <SectionCard title="Selected Stills" action={<Icon name="eye" className="h-5 w-5 text-slate-500" />}>
         <div className="space-y-3">
           {stills.length > 0 ? (
             stills.map((output) => (
@@ -239,7 +240,7 @@ export function PackageResults({
         </div>
       </SectionCard>
 
-      <SectionCard title="Selected Videos">
+      <SectionCard title="Selected Videos" action={<Icon name="eye" className="h-5 w-5 text-slate-500" />}>
         <div className="space-y-3">
           {videos.length > 0 ? (
             videos.map((output) => (
@@ -317,12 +318,13 @@ function VisualOutputPreviewCard({
           <button
             type="button"
             onClick={downloadFile}
-            className={`inline-flex min-h-10 w-full items-center justify-center rounded-md border px-4 text-sm font-semibold ${
+            className={`inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm font-semibold ${
               downloaded
                 ? "border-emerald-300 bg-emerald-50 text-emerald-800"
                 : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
             }`}
           >
+            <Icon name={downloaded ? "check" : "download"} />
             {downloaded ? "OK Downloaded" : "Download"}
           </button>
         ) : (
@@ -420,9 +422,15 @@ function PackageReviewHeader({
           </p>
         </div>
         <div className="grid gap-3 sm:min-w-56">
-          <SecondaryButton href={changeOutputsHref}>Change Outputs</SecondaryButton>
+          <SecondaryButton href={changeOutputsHref} className="gap-2">
+            <Icon name="sliders" />
+            Change Outputs
+          </SecondaryButton>
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <SecondaryButton href={createAnotherVersionHref}>Create Another Version</SecondaryButton>
+            <SecondaryButton href={createAnotherVersionHref} className="gap-2">
+              <Icon name="refresh" />
+              Create Another Version
+            </SecondaryButton>
             <p className="mt-2 text-xs leading-5 text-slate-600">
               Start from this package to make a revised, localized, or alternate-output version.
             </p>
@@ -478,7 +486,7 @@ function PlatformCopyCard({
   }
 
   return (
-    <SectionCard title="Platform Copy">
+    <SectionCard title="Platform Copy" action={<Icon name="message" className="h-5 w-5 text-blue-700" />}>
       <p className="mb-4 text-sm leading-6 text-slate-600">
         Copy deterministic captions and accessibility text for the package without leaving the review screen.
       </p>
@@ -500,8 +508,9 @@ function PlatformCopyCard({
             <button
               type="button"
               onClick={() => copyValue(block.id, block.text)}
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
             >
+              <Icon name="copy" />
               {copiedKey === block.id ? "Copied" : "Copy"}
             </button>
           </div>
@@ -542,7 +551,7 @@ function ArchiveMetadataCard({
   }
 
   return (
-    <SectionCard title="Archive Metadata">
+    <SectionCard title="Archive Metadata" action={<Icon name="archive" className="h-5 w-5 text-blue-700" />}>
       <p className="mb-4 text-sm leading-6 text-slate-600">
         Demo metadata for future search, reuse, and tracking. Nothing is saved yet.
       </p>
@@ -604,8 +613,9 @@ function CopyButton({ label, onClick }: { label: string; onClick: () => void }) 
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
     >
+      <Icon name="copy" />
       {label}
     </button>
   );
@@ -889,9 +899,10 @@ function DownloadAllPackage({
         type="button"
         onClick={downloadAll}
         disabled={disabled}
-        className="inline-flex min-h-11 items-center justify-center rounded-md bg-[#06153a] px-4 text-sm font-semibold !text-white shadow-sm hover:bg-[#12306a] disabled:cursor-not-allowed disabled:bg-slate-300"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#06153a] px-4 text-sm font-semibold !text-white shadow-sm hover:bg-[#12306a] disabled:cursor-not-allowed disabled:bg-slate-300"
         style={{ color: "#ffffff" }}
       >
+        <Icon name={downloaded ? "check" : "download"} />
         <span className="text-white">{isDownloading ? "Preparing Package..." : buttonLabel}</span>
       </button>
     </div>
@@ -958,12 +969,13 @@ function DeliveryOutputCard({
             <button
               type="button"
               onClick={downloadFile}
-              className={`inline-flex min-h-10 items-center justify-center rounded-md border px-4 text-sm font-semibold ${
+              className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-semibold ${
                 downloaded
                   ? "border-emerald-300 bg-emerald-50 text-emerald-800"
                   : "border-slate-300 bg-white text-[#06153a] hover:bg-slate-50"
               }`}
             >
+              <Icon name={downloaded ? "check" : "download"} />
               {downloaded ? "OK Downloaded" : "Download"}
             </button>
           </>
@@ -1034,8 +1046,20 @@ function StateBadge({ state }: { state: DeliveryState | "Downloaded" }) {
     Placeholder: "bg-slate-100 text-slate-700",
     Failed: "bg-orange-50 text-orange-800",
   }[state];
+  const iconName = {
+    Ready: "check",
+    Downloaded: "check",
+    Rendering: "refresh",
+    Placeholder: "warning",
+    Failed: "warning",
+  }[state] as "check" | "refresh" | "warning";
 
-  return <span className={`rounded-md px-2 py-1 text-xs font-semibold ${className}`}>{state}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ${className}`}>
+      <Icon name={iconName} className="h-3.5 w-3.5" />
+      {state}
+    </span>
+  );
 }
 
 function getStateHelp(state: DeliveryState) {
