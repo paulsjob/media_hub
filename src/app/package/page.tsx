@@ -1,5 +1,5 @@
 import { PackageResults, type PackageRenderResult } from "@/components/package-results";
-import { MvpShell, SecondaryButton } from "@/components/ui";
+import { MvpShell } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
 
 export default async function PackagePage({
@@ -46,13 +46,8 @@ export default async function PackagePage({
             generatedAt,
           }}
           changeOutputsHref={backToGenerateHref}
-          createAnotherVersionHref={backToGenerateHref}
+          createNewPackageHref="/generate"
         />
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <SecondaryButton href={backToGenerateHref}>Back to Generate</SecondaryButton>
-          <SecondaryButton href="/">Create Another Package</SecondaryButton>
-        </div>
       </div>
     </MvpShell>
   );

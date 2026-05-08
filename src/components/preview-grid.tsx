@@ -155,7 +155,7 @@ export function PreviewGrid({
             message:
               data.error ??
               data.responseSummary?.info ??
-              "MoDeck did not return a preview image, so the local preview is shown.",
+              "Preview image was not returned, so the local preview is shown.",
             durationMs: data.durationMs ?? null,
             imageSize: null,
           });
@@ -166,7 +166,7 @@ export function PreviewGrid({
           signature: requestSignature,
           state: "loaded",
           imageSrc: toImageSrc(data.imageBase64),
-          message: data.responseSummary?.info ?? "MoDeck preview loaded.",
+          message: data.responseSummary?.info ?? "Preview ready.",
           durationMs: data.durationMs ?? null,
           imageSize: null,
         });
@@ -182,7 +182,7 @@ export function PreviewGrid({
           message:
             error instanceof Error
               ? error.message
-              : "MoDeck preview failed, so the local preview is shown.",
+              : "Preview failed, so the local preview is shown.",
           durationMs: null,
           imageSize: null,
         });
@@ -315,7 +315,7 @@ function ModeckPreviewPanel({
               className={`h-2 w-2 rounded-full ${state === "loading" ? "bg-blue-500" : "bg-orange-500"}`}
               aria-hidden="true"
             />
-            {state === "loading" ? "MoDeck preview rendering" : "Local preview"}
+            {state === "loading" ? "Rendering preview" : "Local preview"}
           </div>
         </div>
       </div>
@@ -326,7 +326,7 @@ function ModeckPreviewPanel({
     <div className="overflow-hidden rounded-lg border border-slate-300 bg-slate-950">
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-3 py-2 text-xs text-slate-200">
         <span className="font-semibold uppercase tracking-wide">
-          {state === "loading" ? "Updating MoDeck preview" : "MoDeck preview loaded"}
+          {state === "loading" ? "Updating preview" : "Preview ready"}
         </span>
         <span className="text-slate-400">
           {imageSize ? `${imageSize.width}x${imageSize.height}` : "Loading image"}
@@ -337,7 +337,7 @@ function ModeckPreviewPanel({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imageSrc}
-          alt="MoDeck-rendered quote card preview"
+          alt="Quote card preview"
           onLoad={(event) => onImageLoad(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)}
           className={`block max-h-[560px] max-w-full rounded-sm border border-slate-700 bg-white object-contain shadow-2xl transition-opacity ${
             state === "loading" ? "opacity-55" : "opacity-100"

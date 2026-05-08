@@ -32,7 +32,7 @@ export function PackageResults({
   packageName,
   packageContext,
   changeOutputsHref,
-  createAnotherVersionHref,
+  createNewPackageHref,
 }: {
   stills: MvpOutputFormat[];
   videos: MvpOutputFormat[];
@@ -47,7 +47,7 @@ export function PackageResults({
     generatedAt: string;
   };
   changeOutputsHref: string;
-  createAnotherVersionHref: string;
+  createNewPackageHref: string;
 }) {
   const [renderResults, setRenderResults] = useState(initialRenderResults);
   const [downloadedOutputIds, setDownloadedOutputIds] = useState<string[]>([]);
@@ -173,13 +173,11 @@ export function PackageResults({
         packageGenerated={outputs.length > 0}
         packageDownloaded={packageDownloaded}
         changeOutputsHref={changeOutputsHref}
-        createAnotherVersionHref={createAnotherVersionHref}
+        createNewPackageHref={createNewPackageHref}
       />
 
-      <SectionCard title="Selected Output Previews" action={<Icon name="eye" className="h-5 w-5 text-blue-700" />}>
-        <p className="mb-4 text-sm leading-6 text-slate-600">
-          Scan the package formats at a glance. Placeholder frames show the selected ratio when the final MoDeck template is not connected yet.
-        </p>
+      <SectionCard title="Output Previews" action={<Icon name="eye" className="h-5 w-5 text-blue-700" />}>
+        <p className="mb-4 text-sm leading-6 text-slate-600">Selected formats at a glance.</p>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {outputs.map((output) => (
             <VisualOutputPreviewCard
@@ -207,7 +205,7 @@ export function PackageResults({
 
       <PlatformCopyCard packageContext={packageContext} />
 
-      <SectionCard title="Download Ready Files" action={<Icon name="download" className="h-5 w-5 text-blue-700" />}>
+      <SectionCard title="Downloads" action={<Icon name="download" className="h-5 w-5 text-blue-700" />}>
         <DownloadAllPackage
           packageName={packageName}
           files={readyDownloads}
@@ -217,51 +215,27 @@ export function PackageResults({
         />
       </SectionCard>
 
-      <SectionCard title="Selected Stills" action={<Icon name="eye" className="h-5 w-5 text-slate-500" />}>
-        <div className="space-y-3">
-          {stills.length > 0 ? (
-            stills.map((output) => (
-              <DeliveryOutputCard
-                key={output.id}
-                output={output}
-                result={renderResults[output.id]}
-                downloaded={downloadedOutputIds.includes(output.id)}
-                packageName={packageName}
-                onDownloaded={() =>
-                  setDownloadedOutputIds((current) =>
-                    current.includes(output.id) ? current : [...current, output.id],
-                  )
-                }
-              />
-            ))
-          ) : (
-            <p className="text-sm text-slate-500">No still outputs selected.</p>
-          )}
+      <details className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <summary className="cursor-pointer text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Output Details
+        </summary>
+        <div className="mt-4 space-y-3">
+          {outputs.map((output) => (
+            <DeliveryOutputCard
+              key={output.id}
+              output={output}
+              result={renderResults[output.id]}
+              downloaded={downloadedOutputIds.includes(output.id)}
+              packageName={packageName}
+              onDownloaded={() =>
+                setDownloadedOutputIds((current) =>
+                  current.includes(output.id) ? current : [...current, output.id],
+                )
+              }
+            />
+          ))}
         </div>
-      </SectionCard>
-
-      <SectionCard title="Selected Videos" action={<Icon name="eye" className="h-5 w-5 text-slate-500" />}>
-        <div className="space-y-3">
-          {videos.length > 0 ? (
-            videos.map((output) => (
-              <DeliveryOutputCard
-                key={output.id}
-                output={output}
-                result={renderResults[output.id]}
-                downloaded={downloadedOutputIds.includes(output.id)}
-                packageName={packageName}
-                onDownloaded={() =>
-                  setDownloadedOutputIds((current) =>
-                    current.includes(output.id) ? current : [...current, output.id],
-                  )
-                }
-              />
-            ))
-          ) : (
-            <p className="text-sm text-slate-500">No video outputs selected.</p>
-          )}
-        </div>
-      </SectionCard>
+      </details>
     </>
   );
 }
@@ -364,7 +338,7 @@ function PreviewFrame({
         )}
         <div className="relative grid gap-1 px-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {state === "Placeholder" ? "Placeholder" : state}
+            {getStateLabel(state)}
           </p>
           <p className="text-lg font-semibold text-[#06153a]">{output.aspectLabel}</p>
           <p className="text-xs text-slate-500">{output.type === "video" ? "Video output" : "Still output"}</p>
@@ -382,7 +356,7 @@ function PackageReviewHeader({
   packageGenerated,
   packageDownloaded,
   changeOutputsHref,
-  createAnotherVersionHref,
+  createNewPackageHref,
 }: {
   packageContext: {
     quote?: string;
@@ -398,7 +372,7 @@ function PackageReviewHeader({
   packageGenerated: boolean;
   packageDownloaded: boolean;
   changeOutputsHref: string;
-  createAnotherVersionHref: string;
+  createNewPackageHref: string;
 }) {
   const requiredFieldsCompleted = Boolean(
     packageContext.quote?.trim() &&
@@ -418,23 +392,18 @@ function PackageReviewHeader({
             </span>
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Review the generated package, copy publishing text, download ready files, or start another version from the same inputs.
+            Review, copy, and download this package.
           </p>
         </div>
-        <div className="grid gap-3 sm:min-w-56">
+        <div className="flex flex-wrap gap-3 sm:justify-end">
           <SecondaryButton href={changeOutputsHref} className="gap-2">
             <Icon name="sliders" />
-            Change Outputs
+            Edit Package
           </SecondaryButton>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <SecondaryButton href={createAnotherVersionHref} className="gap-2">
-              <Icon name="refresh" />
-              Create Another Version
-            </SecondaryButton>
-            <p className="mt-2 text-xs leading-5 text-slate-600">
-              Start from this package to make a revised, localized, or alternate-output version.
-            </p>
-          </div>
+          <SecondaryButton href={createNewPackageHref} className="gap-2">
+            <Icon name="refresh" />
+            Create New Package
+          </SecondaryButton>
         </div>
       </div>
 
@@ -449,7 +418,7 @@ function PackageReviewHeader({
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
           <Metric label="Selected outputs" value={outputs.length} />
           <Metric label="Ready files" value={readyFileCount} />
-          <Metric label="Placeholder files" value={placeholderFileCount} />
+          <Metric label="Not connected" value={placeholderFileCount} />
         </div>
       </div>
 
@@ -487,9 +456,7 @@ function PlatformCopyCard({
 
   return (
     <SectionCard title="Platform Copy" action={<Icon name="message" className="h-5 w-5 text-blue-700" />}>
-      <p className="mb-4 text-sm leading-6 text-slate-600">
-        Copy deterministic captions and accessibility text for the package without leaving the review screen.
-      </p>
+      <p className="mb-4 text-sm leading-6 text-slate-600">Captions and accessibility text.</p>
       <div className="space-y-3">
         {copyBlocks.map((block) => (
           <div
@@ -551,10 +518,8 @@ function ArchiveMetadataCard({
   }
 
   return (
-    <SectionCard title="Archive Metadata" action={<Icon name="archive" className="h-5 w-5 text-blue-700" />}>
-      <p className="mb-4 text-sm leading-6 text-slate-600">
-        Demo metadata for future search, reuse, and tracking. Nothing is saved yet.
-      </p>
+    <SectionCard title="Archive Details" action={<Icon name="archive" className="h-5 w-5 text-blue-700" />}>
+      <p className="mb-4 text-sm leading-6 text-slate-600">Local demo details. Not saved.</p>
       <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
         <div className="grid gap-3 sm:grid-cols-2">
           <MetadataValue label="Package Type" value={metadata.packageType} />
@@ -564,7 +529,7 @@ function ArchiveMetadataCard({
           <MetadataValue label="Context" value={metadata.context} className="sm:col-span-2" />
           <MetadataValue label="Selected Outputs" value={selectedOutputText} className="sm:col-span-2" />
           <MetadataValue label="Ready Files" value={String(metadata.readyFiles)} />
-          <MetadataValue label="Placeholder Files" value={String(metadata.placeholderFiles)} />
+          <MetadataValue label="Not Connected" value={String(metadata.placeholderFiles)} />
           <MetadataValue label="Generated Date" value={metadata.generatedDate} className="sm:col-span-2" />
           <MetadataValue label="Suggested Package ID" value={metadata.suggestedPackageId} className="sm:col-span-2" />
           <MetadataValue label="Suggested Filename Stem" value={metadata.suggestedFilenameStem} className="sm:col-span-2" />
@@ -581,7 +546,7 @@ function ArchiveMetadataCard({
             onClick={() => copyValue("filenameStem", metadata.suggestedFilenameStem)}
           />
           <CopyButton
-            label={copiedKey === "metadata" ? "Copied Metadata JSON" : "Copy Metadata JSON"}
+            label={copiedKey === "metadata" ? "Copied Details JSON" : "Copy Details JSON"}
             onClick={() => copyValue("metadata", JSON.stringify(metadata, null, 2))}
           />
           {copiedKey ? <p className="text-sm font-semibold text-emerald-800">Copied to clipboard.</p> : null}
@@ -889,9 +854,9 @@ function DownloadAllPackage({
         <p className="mt-1 text-sm text-slate-600">
           {readyCount > 0
             ? includesPlaceholders
-              ? "Includes ready files and placeholders currently available for download."
-              : "Download all currently ready final outputs. Rendering or failed files are skipped."
-            : "Download All will activate when at least one output is ready."}
+              ? "Includes ready files and available format placeholders."
+              : "Rendering or failed files are skipped."
+            : "Available when at least one output is ready."}
         </p>
         {downloaded ? <p className="mt-2 text-sm font-semibold text-emerald-800">Package downloaded.</p> : null}
       </div>
@@ -951,7 +916,12 @@ function DeliveryOutputCard({
           <StateBadge state={downloaded ? "Downloaded" : state} />
         </div>
         <p className="mt-1 text-sm text-slate-500">{getStateHelp(state)}</p>
-        {result?.editId ? <p className="mt-1 text-xs text-slate-400">Edit ID: {result.editId}</p> : null}
+        {result?.editId ? (
+          <details className="mt-1 text-xs text-slate-400">
+            <summary className="cursor-pointer">Version details</summary>
+            <p className="mt-1">Version ID: {result.editId}</p>
+          </details>
+        ) : null}
         {showProgress ? (
           <div className="mt-3 max-w-xs">
             <div className="h-2 overflow-hidden rounded-full bg-slate-100">
@@ -1006,7 +976,7 @@ function OutputThumbnail({
       >
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {source === "mock-placeholder" ? "Placeholder" : state}
+            {source === "mock-placeholder" ? "Not connected" : getStateLabel(state)}
           </p>
           <p className="mt-1 text-sm font-semibold text-[#06153a]">{output.aspectLabel}</p>
           <p className="mt-0.5 text-xs text-slate-500">{output.type === "video" ? "Video" : "Still"}</p>
@@ -1057,16 +1027,20 @@ function StateBadge({ state }: { state: DeliveryState | "Downloaded" }) {
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ${className}`}>
       <Icon name={iconName} className="h-3.5 w-3.5" />
-      {state}
+      {getStateLabel(state)}
     </span>
   );
+}
+
+function getStateLabel(state: DeliveryState | "Downloaded") {
+  return state === "Placeholder" ? "Not connected" : state;
 }
 
 function getStateHelp(state: DeliveryState) {
   return {
     Ready: "Final output ready.",
     Rendering: "Final output is still rendering.",
-    Placeholder: "Placeholder file, final MoDeck template not connected yet.",
+    Placeholder: "Format not connected yet.",
     Failed: "Render did not complete.",
   }[state];
 }
@@ -1075,7 +1049,7 @@ function getPreviewHelp(state: DeliveryState) {
   return {
     Ready: "Ready final output.",
     Rendering: "Rendering final output.",
-    Placeholder: "Placeholder output, final MoDeck template not connected yet.",
+    Placeholder: "Format not connected yet.",
     Failed: "Render did not complete.",
   }[state];
 }

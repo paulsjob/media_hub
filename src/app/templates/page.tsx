@@ -12,7 +12,6 @@ interface ConnectedTemplate {
   requiredFields: string[];
   availableOutputs: string[];
   bestFor: string;
-  averageBuildPath: string;
   useHref: string;
 }
 
@@ -31,9 +30,8 @@ const quoteCardTemplate: ConnectedTemplate = {
     "Motion render",
     "Package download",
     "Platform copy",
-    "Archive metadata",
+    "Archive details",
   ],
-  averageBuildPath: "Fill fields -> approve preview -> generate package",
   useHref: "/generate",
 };
 
@@ -67,7 +65,7 @@ export default function TemplatesPage() {
         eyebrow="Media Operations / Template Library"
         title="Template"
         accent="Library"
-        subtitle="Choose the first connected template in the Media Lab factory, with planned formats visible on the roadmap."
+        subtitle="Start with Quote Card. More templates are planned."
       />
 
       <div className="mb-5 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
@@ -75,10 +73,10 @@ export default function TemplatesPage() {
         <FactorySummary />
       </div>
 
-      <SectionCard title="Planned Template Roadmap" action={<Icon name="template" className="h-5 w-5 text-slate-500" />}>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <SectionCard title="Planned Templates" action={<Icon name="template" className="h-5 w-5 text-slate-500" />}>
+        <div className="divide-y divide-slate-100">
           {plannedTemplates.map((template) => (
-            <PlannedTemplateCard key={template.name} template={template} />
+            <PlannedTemplateRow key={template.name} template={template} />
           ))}
         </div>
       </SectionCard>
@@ -94,7 +92,7 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Primary Connected Template</p>
           <h2 className="mt-1 text-2xl font-semibold text-[#06153a]">{template.name}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Use this connected workflow to turn a quote into reviewed files, platform copy, and archive-ready metadata.
+            Turn a quote into reviewed files, captions, and archive details.
           </p>
         </div>
         <StatusPill label={template.status} tone="success" icon="check" />
@@ -104,7 +102,6 @@ function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
         <TemplateText title="Best For" value={template.bestFor} />
         <TemplateList title="Required Fields" items={template.requiredFields} />
         <TemplateList title="Available Outputs" items={template.availableOutputs} />
-        <TemplateText title="Average Build Path" value={template.averageBuildPath} />
       </div>
 
       <div className="mt-5 border-t border-slate-100 pt-4">
@@ -123,8 +120,7 @@ function FactorySummary() {
       <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Template Factory</p>
       <h2 className="mt-1 text-xl font-semibold text-[#06153a]">Repeatable media packages</h2>
       <p className="mt-3 text-sm leading-6">
-        Browse the factory, pick the connected template, validate the preview, then leave with downloads, platform copy,
-        and archive-ready metadata.
+        Pick a template, preview the work, then leave with files and copy.
       </p>
       <div className="mt-4 grid gap-2 text-sm font-semibold">
         <span>1 connected template</span>
@@ -135,24 +131,18 @@ function FactorySummary() {
   );
 }
 
-function PlannedTemplateCard({ template }: { template: PlannedTemplate }) {
+function PlannedTemplateRow({ template }: { template: PlannedTemplate }) {
   return (
-    <article className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Future Template</p>
-          <h3 className="mt-1 text-lg font-semibold text-[#06153a]">{template.name}</h3>
-        </div>
+    <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 className="font-semibold text-[#06153a]">{template.name}</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-600">{template.bestFor}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
         <StatusPill label="Planned" tone="neutral" icon="warning" />
-      </div>
-      <TemplateText title="Best For" value={template.bestFor} />
-      <div className="mt-4 flex-1">
-        <TemplateText title="Available Outputs" value="Placeholder / Coming soon" />
-      </div>
-      <div className="mt-5 border-t border-slate-100 pt-4">
         <DisabledAction>Coming soon</DisabledAction>
       </div>
-    </article>
+    </div>
   );
 }
 

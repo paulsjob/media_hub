@@ -3,6 +3,7 @@ import { Icon } from "@/components/icons";
 import { MvpShell, SecondaryButton } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
 import type { PreviewContent } from "@/lib/preview-state";
+import Link from "next/link";
 
 export default async function GeneratePage({
   searchParams,
@@ -36,26 +37,25 @@ export default async function GeneratePage({
             Quote Card Package Generator
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Select package outputs, fill the quote card fields, approve the preview, and generate a reviewable package.
+            Select outputs, fill fields, preview, and generate a package.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col items-start gap-2 sm:items-end">
           <SecondaryButton href="/templates" className="gap-2">
             <Icon name="template" />
             Change Template
           </SecondaryButton>
-          <SecondaryButton href="/dev/modeck-preview-test" className="gap-2">
-            <Icon name="eye" />
-            Open Dev Preview Harness
-          </SecondaryButton>
+          <Link href="/dev/modeck-preview-test" className="text-xs font-semibold text-slate-400 hover:text-slate-600">
+            Diagnostics
+          </Link>
         </div>
       </div>
 
       {startedFromPreviewTest ? (
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-          <p className="font-semibold">Started from MoDeck Preview/Test</p>
+          <p className="font-semibold">Started from diagnostic preview</p>
           <p className="mt-1">
-            Template: {preview.template.name} {preview.template.version} / Status: Active / MoDeck: Connected
+            Template: {preview.template.name} {preview.template.version} / Status: Connected
           </p>
         </div>
       ) : null}

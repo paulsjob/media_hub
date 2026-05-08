@@ -6,7 +6,6 @@ import { Icon } from "@/components/icons";
 import { PreviewGrid } from "@/components/preview-grid";
 import {
   ButtonLike,
-  SecondaryButton,
   SectionCard,
 } from "@/components/ui";
 import { mediaLabPayloadToModeckRenderRequest } from "@/lib/modeck/modeck-mapping";
@@ -202,16 +201,16 @@ export function PackageGenerator({
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-[#06153a]">Preview looks right? Approve it to unlock package generation.</p>
+                <p className="font-semibold text-[#06153a]">Looks good? Continue to package.</p>
               </div>
               {outputsOpen ? (
                 <span className="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800">
-                  Preview approved. Package actions unlocked.
+                  Preview approved.
                 </span>
               ) : (
                 <ButtonLike variant="primary" onClick={() => setOutputsOpen(true)} className="shrink-0 gap-2">
                   <Icon name="check" />
-                  Approve Preview
+                  Looks Good
                 </ButtonLike>
               )}
             </div>
@@ -220,24 +219,7 @@ export function PackageGenerator({
       </div>
 
       {outputsOpen ? (
-        <>
-          <SectionCard title="Ready to Generate" action={<Icon name="package" className="h-5 w-5 text-blue-700" />}>
-            <div className="flex flex-wrap gap-2">
-              {outputs
-                .filter((output) => selectedIds.includes(output.id))
-                .map((output) => (
-                  <span
-                    key={output.id}
-                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-[#06153a]"
-                  >
-                    {output.type === "video" ? "Video" : "Still"} {output.label}
-                  </span>
-                ))}
-            </div>
-          </SectionCard>
-
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <SecondaryButton href="/templates">Change Template</SecondaryButton>
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
             <ButtonLike variant="secondary" onClick={() => setOutputsOpen(false)} className="gap-2">
               <Icon name="sliders" />
               Back to Edit
@@ -249,10 +231,9 @@ export function PackageGenerator({
               className="gap-2"
             >
               <Icon name="package" />
-              {isGenerating ? "Generating package..." : "Generate Review Package"}
+              {isGenerating ? "Generating package..." : "Generate Package"}
             </ButtonLike>
           </div>
-        </>
       ) : null}
     </div>
   );
