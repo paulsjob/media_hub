@@ -72,9 +72,8 @@ export function PackageResults({
         .map((output) => {
           const result = renderResults[output.id];
           const downloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
-          const ready = Boolean(downloadUrl) && (result?.source !== "modeck-render" || result.status === "completed");
 
-          return ready
+          return isResultDownloadable(result, downloadUrl)
             ? {
                 output,
                 downloadUrl,
@@ -274,17 +273,24 @@ function VisualOutputPreviewCard({
 }) {
   const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
   const state = getDeliveryState(result);
-  const canDownload = Boolean(resolvedDownloadUrl) && (result?.source !== "modeck-render" || result.status === "completed");
+  const canDownload = isResultDownloadable(result, resolvedDownloadUrl);
   const thumbnailUrl = getPreviewThumbnailUrl(output, result, resolvedDownloadUrl, state);
   const previewHelp = getPreviewHelp(state);
+  const [downloadError, setDownloadError] = useState("");
 
   async function downloadFile() {
     if (!canDownload) {
       return;
     }
 
-    await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output, result?.source));
-    onDownloaded();
+    setDownloadError("");
+
+    try {
+      await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output, result?.source));
+      onDownloaded();
+    } catch {
+      setDownloadError("File unavailable.");
+    }
   }
 
   return (
@@ -326,6 +332,7 @@ function VisualOutputPreviewCard({
             {getUnavailableActionLabel(state)}
           </span>
         )}
+        {downloadError ? <p className="mt-2 text-sm font-semibold text-orange-800">{downloadError}</p> : null}
       </div>
     </article>
   );
@@ -812,6 +819,10 @@ function DownloadAllPackage({
   onDownloaded: () => void;
 }) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState<{
+    tone: "warning" | "error";
+    message: string;
+  } | null>(null);
   const readyCount = files.length;
   const disabled = readyCount === 0 || isDownloading;
   const includesPlaceholders = files.some((file) => file.source === "mock-placeholder");
@@ -824,32 +835,47 @@ function DownloadAllPackage({
     }
 
     setIsDownloading(true);
+    setDownloadStatus(null);
 
     try {
-      if (files.length === 1) {
-        await downloadUrl(files[0].downloadUrl, files[0].filename);
-        onDownloaded();
-        return;
-      }
-
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
+      const failedFiles: string[] = [];
+      let downloadedCount = 0;
 
-      await Promise.all(
-        files.map(async (file) => {
+      for (const file of files) {
+        try {
           const response = await fetch(file.downloadUrl);
 
           if (!response.ok) {
-            throw new Error(`Could not download ${file.filename}.`);
+            failedFiles.push(file.filename);
+            continue;
           }
 
           zip.file(file.filename, await response.blob());
-        }),
-      );
+          downloadedCount += 1;
+        } catch {
+          failedFiles.push(file.filename);
+        }
+      }
+
+      if (downloadedCount === 0) {
+        setDownloadStatus({ tone: "error", message: "No files could be downloaded." });
+        return;
+      }
 
       const blob = await zip.generateAsync({ type: "blob" });
       downloadBlob(blob, `${packageName}.zip`);
       onDownloaded();
+
+      if (failedFiles.length > 0) {
+        setDownloadStatus({
+          tone: "warning",
+          message: `Downloaded ${downloadedCount} ${pluralize("file", downloadedCount)}. ${failedFiles.length} unavailable.`,
+        });
+      }
+    } catch {
+      setDownloadStatus({ tone: "error", message: "No files could be downloaded." });
     } finally {
       setIsDownloading(false);
     }
@@ -871,6 +897,17 @@ function DownloadAllPackage({
             : "Available when at least one output is ready."}
         </p>
         {downloaded ? <p className="mt-2 text-sm font-semibold text-emerald-800">Package downloaded.</p> : null}
+        {downloadStatus ? (
+          <p
+            className={`mt-2 text-sm font-semibold ${
+              downloadStatus.tone === "warning"
+                  ? "text-orange-800"
+                  : "text-red-700"
+            }`}
+          >
+            {downloadStatus.message}
+          </p>
+        ) : null}
       </div>
       <button
         type="button"
@@ -901,16 +938,23 @@ function DeliveryOutputCard({
 }) {
   const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
   const state = getDeliveryState(result);
-  const canDownload = Boolean(resolvedDownloadUrl) && (result?.source !== "modeck-render" || result.status === "completed");
+  const canDownload = isResultDownloadable(result, resolvedDownloadUrl);
   const showProgress = result?.source === "modeck-render" && ["queued", "rendering"].includes(result.status ?? "");
+  const [downloadError, setDownloadError] = useState("");
 
   async function downloadFile() {
     if (!canDownload) {
       return;
     }
 
-    await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output, result?.source));
-    onDownloaded();
+    setDownloadError("");
+
+    try {
+      await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output, result?.source));
+      onDownloaded();
+    } catch {
+      setDownloadError("File unavailable.");
+    }
   }
 
   return (
@@ -963,9 +1007,10 @@ function DeliveryOutputCard({
           </>
         ) : (
           <span className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-500">
-            {state}
+            {getUnavailableActionLabel(state)}
           </span>
         )}
+        {downloadError ? <p className="text-sm font-semibold text-orange-800">{downloadError}</p> : null}
       </div>
     </div>
   );
@@ -998,14 +1043,18 @@ function OutputThumbnail({
   );
 }
 
-type DeliveryState = "Ready" | "Rendering" | "Placeholder" | "Failed";
+type DeliveryState = "Ready" | "Rendering" | "Placeholder" | "Unavailable" | "Failed";
 
 function getDeliveryState(result?: PackageRenderResult): DeliveryState {
   if (!result) {
     return "Rendering";
   }
 
-  if (result.status === "failed" || result.status === "canceled" || result.errorMessage) {
+  if (result.errorMessage) {
+    return "Unavailable";
+  }
+
+  if (result.status === "failed" || result.status === "canceled") {
     return "Failed";
   }
 
@@ -1026,6 +1075,7 @@ function StateBadge({ state }: { state: DeliveryState | "Downloaded" }) {
     Downloaded: "bg-emerald-100 text-emerald-900",
     Rendering: "bg-blue-50 text-blue-800",
     Placeholder: "bg-slate-100 text-slate-700",
+    Unavailable: "bg-orange-50 text-orange-800",
     Failed: "bg-orange-50 text-orange-800",
   }[state];
   const iconName = {
@@ -1033,6 +1083,7 @@ function StateBadge({ state }: { state: DeliveryState | "Downloaded" }) {
     Downloaded: "check",
     Rendering: "refresh",
     Placeholder: "warning",
+    Unavailable: "warning",
     Failed: "warning",
   }[state] as "check" | "refresh" | "warning";
 
@@ -1045,7 +1096,15 @@ function StateBadge({ state }: { state: DeliveryState | "Downloaded" }) {
 }
 
 function getStateLabel(state: DeliveryState | "Downloaded") {
-  return state === "Placeholder" ? "Not connected" : state;
+  if (state === "Placeholder") {
+    return "Not connected";
+  }
+
+  if (state === "Unavailable") {
+    return "Render unavailable";
+  }
+
+  return state;
 }
 
 function getStateHelp(state: DeliveryState) {
@@ -1053,6 +1112,7 @@ function getStateHelp(state: DeliveryState) {
     Ready: "Final output ready.",
     Rendering: "Final output is still rendering.",
     Placeholder: "Format not connected yet.",
+    Unavailable: "Render unavailable.",
     Failed: "Render did not complete.",
   }[state];
 }
@@ -1062,6 +1122,7 @@ function getPreviewHelp(state: DeliveryState) {
     Ready: "",
     Rendering: "",
     Placeholder: "Format not connected yet.",
+    Unavailable: "Render unavailable.",
     Failed: "Render did not complete.",
   }[state];
 }
@@ -1071,6 +1132,7 @@ function getUnavailableActionLabel(state: DeliveryState) {
     Ready: "Unavailable",
     Rendering: "Waiting",
     Placeholder: "Not available",
+    Unavailable: "File unavailable",
     Failed: "Failed",
   }[state];
 }
@@ -1092,6 +1154,14 @@ function getPreviewThumbnailUrl(
   return resolvedDownloadUrl;
 }
 
+function isResultDownloadable(result: PackageRenderResult | undefined, resolvedDownloadUrl: string) {
+  if (!result || !resolvedDownloadUrl || result.errorMessage) {
+    return false;
+  }
+
+  return result.source !== "modeck-render" || result.status === "completed";
+}
+
 async function downloadUrl(url: string, filename: string) {
   const response = await fetch(url);
 
@@ -1100,6 +1170,10 @@ async function downloadUrl(url: string, filename: string) {
   }
 
   downloadBlob(await response.blob(), filename);
+}
+
+function pluralize(word: string, count: number) {
+  return count === 1 ? word : `${word}s`;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
