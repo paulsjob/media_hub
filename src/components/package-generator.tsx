@@ -160,7 +160,7 @@ export function PackageGenerator({
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] xl:items-start">
         <div className="space-y-4">
-          <SectionCard title="Select Package Outputs" className="p-4" action={<Icon name="sliders" className="h-5 w-5 text-blue-700" />}>
+          <SectionCard title="Select Package Outputs" className="p-4">
             <OutputSelector
               outputs={outputs}
               selectedIds={selectedIds}
@@ -173,6 +173,16 @@ export function PackageGenerator({
             <div className="grid gap-4">
               {template.required_fields.map((fieldName) => {
                 const key = fieldMap[fieldName] ?? "quote";
+                if (fieldName === "Headshot") {
+                  return (
+                    <HeadshotField
+                      key={fieldName}
+                      value={content[key]}
+                      onChange={(value) => updateContent(key, value)}
+                    />
+                  );
+                }
+
                 return (
                   <GeneratorField
                     key={fieldName}
@@ -183,6 +193,7 @@ export function PackageGenerator({
                   />
                 );
               })}
+              <BrandControl />
             </div>
           </SectionCard>
         </div>
@@ -220,20 +231,20 @@ export function PackageGenerator({
 
       {outputsOpen ? (
         <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
-            <ButtonLike variant="secondary" onClick={() => setOutputsOpen(false)} className="gap-2">
-              <Icon name="sliders" />
-              Back to Edit
-            </ButtonLike>
-            <ButtonLike
-              variant="primary"
-              onClick={generatePackage}
-              disabled={selectedIds.length === 0 || isGenerating}
-              className="gap-2"
-            >
-              <Icon name="package" />
-              {isGenerating ? "Generating package..." : "Generate Package"}
-            </ButtonLike>
-          </div>
+          <ButtonLike variant="secondary" onClick={() => setOutputsOpen(false)} className="gap-2">
+            <Icon name="sliders" />
+            Back to Edit
+          </ButtonLike>
+          <ButtonLike
+            variant="primary"
+            onClick={generatePackage}
+            disabled={selectedIds.length === 0 || isGenerating}
+            className="gap-2"
+          >
+            <Icon name="package" />
+            {isGenerating ? "Generating package..." : "Generate Package"}
+          </ButtonLike>
+        </div>
       ) : null}
     </div>
   );
@@ -325,6 +336,14 @@ function OutputSelector({
               .map((output) => {
                 const selected = selectedIds.includes(output.id);
                 const active = activeOutputId === output.id;
+                const selectedClass =
+                  output.type === "still"
+                    ? active
+                      ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                      : "border-emerald-300 bg-emerald-50 text-emerald-900"
+                    : active
+                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                      : "border-blue-300 bg-blue-50 text-blue-900";
 
                 return (
                   <button
@@ -334,22 +353,43 @@ function OutputSelector({
                     aria-pressed={selected}
                     title={getOutputTitle(output)}
                     className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
-                      active
-                        ? "border-blue-500 bg-blue-50 text-blue-900 shadow-sm"
-                        : selected
-                          ? "border-emerald-300 bg-emerald-50 text-[#06153a]"
-                          : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+                      selected
+                        ? selectedClass
+                        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
                     }`}
                   >
                     <RatioGlyph ratio={output.aspectLabel} active={active} selected={selected} />
                     <span>{output.aspectLabel}</span>
-                    {selected ? <span aria-hidden="true">OK</span> : null}
                   </button>
                 );
               })}
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function HeadshotField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="grid gap-3">
+      <GeneratorField label="Headshot" value={value} onChange={onChange} />
+      <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[#06153a]">Upload headshot</p>
+            <p className="text-xs text-slate-500">Not connected yet. Use the filename field for now.</p>
+          </div>
+          {/* TODO: Wire file upload to media storage and pass the resolved asset filename into preview/render payloads. */}
+          <input type="file" accept="image/*" disabled className="text-xs text-slate-400" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -374,9 +414,9 @@ function RatioGlyph({
     <span
       className={`inline-block rounded-sm border ${
         active
-          ? "border-blue-600 bg-blue-200"
+          ? "border-current bg-white/35"
           : selected
-            ? "border-emerald-600 bg-emerald-100"
+            ? "border-current bg-white/35"
             : "border-slate-400 bg-slate-100"
       } ${shapeClass}`}
       aria-hidden="true"
@@ -384,8 +424,26 @@ function RatioGlyph({
   );
 }
 
+function BrandControl() {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Brand <span className="text-slate-400">Not connected yet</span>
+      </span>
+      {/* TODO: Connect brand selection to the MoDeck render/preview payload once the MOGRT brand control is mapped. */}
+      <select
+        className="h-12 w-full cursor-not-allowed rounded-md border border-slate-200 bg-slate-50 px-3 text-base text-slate-500"
+        value="default"
+        disabled
+      >
+        <option value="default">Default brand</option>
+      </select>
+    </label>
+  );
+}
+
 function getOutputTitle(output: MvpOutputFormat) {
-  return `${output.width}x${output.height} · ${output.aspectLabel} · ${output.recommendedPlatforms
+  return `${output.width}x${output.height} - ${output.aspectLabel} - ${output.recommendedPlatforms
     .slice(0, 2)
     .join(", ")}`;
 }

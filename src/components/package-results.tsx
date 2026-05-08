@@ -177,7 +177,6 @@ export function PackageResults({
       />
 
       <SectionCard title="Output Previews" action={<Icon name="eye" className="h-5 w-5 text-blue-700" />}>
-        <p className="mb-4 text-sm leading-6 text-slate-600">Selected formats at a glance.</p>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {outputs.map((output) => (
             <VisualOutputPreviewCard
@@ -196,14 +195,14 @@ export function PackageResults({
         </div>
       </SectionCard>
 
+      <PlatformCopyCard packageContext={packageContext} />
+
       <ArchiveMetadataCard
         packageContext={packageContext}
         outputs={outputs}
         readyFileCount={readyFileCount}
         placeholderFileCount={placeholderFileCount}
       />
-
-      <PlatformCopyCard packageContext={packageContext} />
 
       <SectionCard title="Downloads" action={<Icon name="download" className="h-5 w-5 text-blue-700" />}>
         <DownloadAllPackage
@@ -257,6 +256,7 @@ function VisualOutputPreviewCard({
   const state = getDeliveryState(result);
   const canDownload = Boolean(resolvedDownloadUrl) && (result?.source !== "modeck-render" || result.status === "completed");
   const thumbnailUrl = getPreviewThumbnailUrl(output, result, resolvedDownloadUrl, state);
+  const previewHelp = getPreviewHelp(state);
 
   async function downloadFile() {
     if (!canDownload) {
@@ -285,7 +285,7 @@ function VisualOutputPreviewCard({
 
       <PreviewFrame output={output} state={state} thumbnailUrl={thumbnailUrl} />
 
-      <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{getPreviewHelp(state)}</p>
+      {previewHelp ? <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{previewHelp}</p> : <div className="flex-1" />}
 
       <div className="mt-4">
         {canDownload ? (
@@ -299,11 +299,11 @@ function VisualOutputPreviewCard({
             }`}
           >
             <Icon name={downloaded ? "check" : "download"} />
-            {downloaded ? "OK Downloaded" : "Download"}
+            {downloaded ? "Downloaded" : "Download"}
           </button>
         ) : (
           <span className="inline-flex min-h-10 w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-500">
-            {state}
+            {getUnavailableActionLabel(state)}
           </span>
         )}
       </div>
@@ -337,11 +337,10 @@ function PreviewFrame({
           <div className="absolute inset-0 bg-[linear-gradient(135deg,#f8fafc_0%,#eef2ff_100%)]" aria-hidden="true" />
         )}
         <div className="relative grid gap-1 px-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {getStateLabel(state)}
-          </p>
           <p className="text-lg font-semibold text-[#06153a]">{output.aspectLabel}</p>
-          <p className="text-xs text-slate-500">{output.type === "video" ? "Video output" : "Still output"}</p>
+          <p className="text-xs text-slate-500">
+            {state === "Rendering" ? "Preview pending" : output.type === "video" ? "Video output" : "Still output"}
+          </p>
         </div>
       </div>
     </div>
@@ -387,13 +386,8 @@ function PackageReviewHeader({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl font-semibold tracking-tight text-[#06153a]">Quote Card Package</h1>
-            <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-              Status: Ready for review
-            </span>
+            <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">Ready</span>
           </div>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Review, copy, and download this package.
-          </p>
         </div>
         <div className="flex flex-wrap gap-3 sm:justify-end">
           <SecondaryButton href={changeOutputsHref} className="gap-2">
@@ -456,12 +450,11 @@ function PlatformCopyCard({
 
   return (
     <SectionCard title="Platform Copy" action={<Icon name="message" className="h-5 w-5 text-blue-700" />}>
-      <p className="mb-4 text-sm leading-6 text-slate-600">Captions and accessibility text.</p>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {copyBlocks.map((block) => (
           <div
             key={block.id}
-            className={`grid gap-3 rounded-lg border p-4 md:grid-cols-[9rem_1fr_auto] md:items-start ${
+            className={`grid gap-3 rounded-lg border px-3 py-2 md:grid-cols-[8rem_1fr_auto] md:items-start ${
               copiedKey === block.id ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"
             }`}
           >
@@ -471,7 +464,7 @@ function PlatformCopyCard({
                 <p className="mt-1 text-xs font-semibold text-emerald-800">Copied</p>
               ) : null}
             </div>
-            <p className="whitespace-pre-line text-sm leading-6 text-slate-700">{block.text}</p>
+            <p className="line-clamp-3 whitespace-pre-line text-sm leading-6 text-slate-700">{block.text}</p>
             <button
               type="button"
               onClick={() => copyValue(block.id, block.text)}
@@ -518,9 +511,13 @@ function ArchiveMetadataCard({
   }
 
   return (
-    <SectionCard title="Archive Details" action={<Icon name="archive" className="h-5 w-5 text-blue-700" />}>
-      <p className="mb-4 text-sm leading-6 text-slate-600">Local demo details. Not saved.</p>
-      <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
+    <details className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <Icon name="archive" className="h-4 w-4 text-slate-400" />
+        Archive Details
+      </summary>
+      <p className="mt-3 text-sm text-slate-500">Local demo details. Not saved.</p>
+      <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_auto]">
         <div className="grid gap-3 sm:grid-cols-2">
           <MetadataValue label="Package Type" value={metadata.packageType} />
           <MetadataValue label="Status" value={metadata.status} />
@@ -552,7 +549,7 @@ function ArchiveMetadataCard({
           {copiedKey ? <p className="text-sm font-semibold text-emerald-800">Copied to clipboard.</p> : null}
         </div>
       </div>
-    </SectionCard>
+    </details>
   );
 }
 
@@ -854,7 +851,7 @@ function DownloadAllPackage({
         <p className="mt-1 text-sm text-slate-600">
           {readyCount > 0
             ? includesPlaceholders
-              ? "Includes ready files and available format placeholders."
+              ? "Includes ready files and available placeholders."
               : "Rendering or failed files are skipped."
             : "Available when at least one output is ready."}
         </p>
@@ -946,7 +943,7 @@ function DeliveryOutputCard({
               }`}
             >
               <Icon name={downloaded ? "check" : "download"} />
-              {downloaded ? "OK Downloaded" : "Download"}
+              {downloaded ? "Downloaded" : "Download"}
             </button>
           </>
         ) : (
@@ -1047,10 +1044,19 @@ function getStateHelp(state: DeliveryState) {
 
 function getPreviewHelp(state: DeliveryState) {
   return {
-    Ready: "Ready final output.",
-    Rendering: "Rendering final output.",
+    Ready: "",
+    Rendering: "",
     Placeholder: "Format not connected yet.",
     Failed: "Render did not complete.",
+  }[state];
+}
+
+function getUnavailableActionLabel(state: DeliveryState) {
+  return {
+    Ready: "Unavailable",
+    Rendering: "Waiting",
+    Placeholder: "Not available",
+    Failed: "Failed",
   }[state];
 }
 

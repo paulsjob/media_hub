@@ -8,7 +8,6 @@ import {
 
 interface ConnectedTemplate {
   name: string;
-  status: "Connected";
   requiredFields: string[];
   availableOutputs: string[];
   bestFor: string;
@@ -22,7 +21,6 @@ interface PlannedTemplate {
 
 const quoteCardTemplate: ConnectedTemplate = {
   name: "Quote Card",
-  status: "Connected",
   bestFor: "Official statements, member quotes, rapid response",
   requiredFields: ["Quote", "Speaker", "Speaker Title", "Context Line"],
   availableOutputs: [
@@ -87,30 +85,62 @@ export default function TemplatesPage() {
 function ConnectedTemplateCard({ template }: { template: ConnectedTemplate }) {
   return (
     <article className="flex h-full flex-col rounded-lg border border-emerald-200 bg-white p-5 shadow-sm">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Primary Connected Template</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Primary Template</p>
           <h2 className="mt-1 text-2xl font-semibold text-[#06153a]">{template.name}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
             Turn a quote into reviewed files, captions, and archive details.
           </p>
         </div>
-        <StatusPill label={template.status} tone="success" icon="check" />
+        <div className="flex shrink-0 items-center gap-3">
+          <StatusDot status="ready" label="Available" />
+          <PrimaryActionButton href={template.useHref} className="sm:min-w-36">
+            <Icon name="package" />
+            Use Template
+          </PrimaryActionButton>
+        </div>
       </div>
 
-      <div className="grid flex-1 gap-4 lg:grid-cols-2">
-        <TemplateText title="Best For" value={template.bestFor} />
-        <TemplateList title="Required Fields" items={template.requiredFields} />
-        <TemplateList title="Available Outputs" items={template.availableOutputs} />
-      </div>
-
-      <div className="mt-5 border-t border-slate-100 pt-4">
-        <PrimaryActionButton href={template.useHref} className="sm:min-w-40">
-          <Icon name="package" />
-          Use Quote Card
-        </PrimaryActionButton>
-      </div>
+      <details className="mt-4 border-t border-slate-100 pt-3">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-600">Details</summary>
+        <div className="mt-4 grid gap-5 lg:grid-cols-[0.9fr_1fr]">
+          <TemplateSamplePreview />
+          <div className="grid content-start gap-3">
+            <TemplateText title="Best for" value="Official statements, quotes, rapid response" />
+            <TemplateText title="Fields" value="Quote, speaker, title, context" />
+            <TemplateText title="Outputs" value="Static, motion, package, copy" />
+            <TemplateText title="Note" value="Brand and media controls are being connected in the production workflow." />
+          </div>
+        </div>
+      </details>
     </article>
+  );
+}
+
+function TemplateSamplePreview() {
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-[#06153a] p-4 text-white shadow-sm">
+      <div className="mb-4 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-white/70">
+        <span>Official Statement</span>
+        <span>16:9 sample</span>
+      </div>
+      <div className="grid min-h-44 grid-cols-[1fr_auto] gap-4">
+        <div className="flex flex-col justify-end">
+          <p className="text-2xl font-semibold leading-tight">
+            A short statement appears here.
+          </p>
+          <div className="mt-4">
+            <p className="font-semibold">Speaker Name</p>
+            <p className="text-sm text-white/70">Short supporting title</p>
+            <p className="mt-2 text-xs uppercase tracking-wide text-white/55">Organization Name</p>
+          </div>
+        </div>
+        <div className="grid h-24 w-24 place-items-center self-end rounded-full border border-white/20 bg-white/10">
+          <span className="text-xs font-semibold uppercase text-white/55">Avatar</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -123,7 +153,7 @@ function FactorySummary() {
         Pick a template, preview the work, then leave with files and copy.
       </p>
       <div className="mt-4 grid gap-2 text-sm font-semibold">
-        <span>1 connected template</span>
+        <span>1 available template</span>
         <span>5 planned formats</span>
         <span>Package delivery workflow live</span>
       </div>
@@ -139,7 +169,7 @@ function PlannedTemplateRow({ template }: { template: PlannedTemplate }) {
         <p className="mt-1 text-sm leading-6 text-slate-600">{template.bestFor}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <StatusPill label="Planned" tone="neutral" icon="warning" />
+        <StatusDot status="planned" label="Planned" />
         <DisabledAction>Coming soon</DisabledAction>
       </div>
     </div>
@@ -155,39 +185,25 @@ function TemplateText({ title, value }: { title: string; value: string }) {
   );
 }
 
-function TemplateList({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
-      <ul className="space-y-1.5 text-sm leading-5 text-slate-700">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function StatusPill({
+function StatusDot({
+  status,
   label,
-  tone,
-  icon,
 }: {
+  status: "ready" | "planned" | "unavailable";
   label: string;
-  tone: "success" | "info" | "neutral";
-  icon?: "check" | "warning";
 }) {
-  const toneClass = {
-    success: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-    info: "bg-blue-50 text-blue-800 ring-blue-200",
-    neutral: "bg-slate-100 text-slate-700 ring-slate-200",
-  }[tone];
+  const dotClass = {
+    ready: "bg-emerald-500",
+    planned: "bg-amber-500",
+    unavailable: "bg-red-500",
+  }[status];
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ring-1 ${toneClass}`}>
-      {icon ? <Icon name={icon} className="h-3.5 w-3.5" /> : null}
-      {label}
-    </span>
+    <span
+      className={`inline-block h-2.5 w-2.5 rounded-full ${dotClass}`}
+      aria-label={label}
+      title={label}
+    />
   );
 }
 
