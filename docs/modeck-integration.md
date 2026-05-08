@@ -64,7 +64,7 @@ The first mapping is Quote Card:
 | `speakerName` | `Speaker Name` | text |
 | `speakerTitle` | `Speaker Title` | text |
 | `contextLine` | `Context Line` | text |
-| `headshot` | `Headshot` | media replacement |
+| `headshot` | `HEADSHOT` | media replacement |
 
 Ratio-specific MOGRT names:
 

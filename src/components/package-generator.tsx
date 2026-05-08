@@ -32,6 +32,13 @@ interface RenderStartResult {
   error?: string;
 }
 
+interface HeadshotUploadResult {
+  ok: boolean;
+  mediaReference?: string;
+  uploadedFilename?: string;
+  error?: string;
+}
+
 export function PackageGenerator({
   template,
   fields,
@@ -67,6 +74,8 @@ export function PackageGenerator({
     previewUrl: string;
   } | null>(null);
   const [headshotError, setHeadshotError] = useState("");
+  const [headshotUploadState, setHeadshotUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle");
+  const [uploadedHeadshotReference, setUploadedHeadshotReference] = useState("");
   const [fileInputKey, setFileInputKey] = useState(0);
   const previewContent = useMemo(
     () => ({
@@ -111,8 +120,9 @@ export function PackageGenerator({
     setContent((current) => ({ ...current, [key]: value }));
   }
 
-  function selectHeadshotFile(file: File | null) {
+  async function selectHeadshotFile(file: File | null) {
     setHeadshotError("");
+    setUploadedHeadshotReference("");
 
     setSelectedHeadshot((current) => {
       if (current?.previewUrl) {
@@ -125,6 +135,7 @@ export function PackageGenerator({
 
       if (!file.type.startsWith("image/")) {
         setHeadshotError("Choose an image file.");
+        setHeadshotUploadState("error");
         return null;
       }
 
@@ -133,6 +144,35 @@ export function PackageGenerator({
         previewUrl: URL.createObjectURL(file),
       };
     });
+
+    if (!file) {
+      setHeadshotUploadState("idle");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      return;
+    }
+
+    setHeadshotUploadState("uploading");
+
+    try {
+      const uploadResult = await uploadHeadshot(file);
+      const mediaReference = uploadResult.mediaReference ?? uploadResult.uploadedFilename ?? "";
+
+      if (!uploadResult.ok || !mediaReference) {
+        setHeadshotUploadState("error");
+        setHeadshotError(uploadResult.error ?? "Headshot upload failed.");
+        return;
+      }
+
+      setUploadedHeadshotReference(mediaReference);
+      setContent((current) => ({ ...current, headshot: mediaReference }));
+      setHeadshotUploadState("ready");
+    } catch (error) {
+      setHeadshotUploadState("error");
+      setHeadshotError(error instanceof Error ? error.message : "Headshot upload failed.");
+    }
   }
 
   function clearHeadshotFile() {
@@ -236,6 +276,8 @@ export function PackageGenerator({
                       selectedFilename={selectedHeadshot?.filename}
                       previewUrl={selectedHeadshot?.previewUrl}
                       errorMessage={headshotError}
+                      uploadState={headshotUploadState}
+                      uploadedReference={uploadedHeadshotReference}
                       fileInputKey={fileInputKey}
                       onFileChange={selectHeadshotFile}
                       onClearFile={clearHeadshotFile}
@@ -337,6 +379,25 @@ async function startLiveModeckRender(content: PreviewContent): Promise<RenderSta
   }
 }
 
+async function uploadHeadshot(file: File): Promise<HeadshotUploadResult> {
+  const formData = new FormData();
+
+  formData.set("file", file);
+
+  const response = await fetch("/api/modeck/media/upload", {
+    method: "POST",
+    body: formData,
+  });
+  const data = (await response.json()) as Partial<HeadshotUploadResult>;
+
+  return {
+    ok: response.ok && data.ok === true,
+    mediaReference: data.mediaReference,
+    uploadedFilename: data.uploadedFilename,
+    error: data.error,
+  };
+}
+
 function GeneratorField({
   label,
   value,
@@ -434,6 +495,8 @@ function HeadshotField({
   selectedFilename,
   previewUrl,
   errorMessage,
+  uploadState,
+  uploadedReference,
   fileInputKey,
   onFileChange,
   onClearFile,
@@ -443,6 +506,8 @@ function HeadshotField({
   selectedFilename?: string;
   previewUrl?: string;
   errorMessage: string;
+  uploadState: "idle" | "uploading" | "ready" | "error";
+  uploadedReference: string;
   fileInputKey: number;
   onFileChange: (file: File | null) => void;
   onClearFile: () => void;
@@ -469,7 +534,12 @@ function HeadshotField({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-[#06153a]">{selectedFilename}</p>
-            <p className="mt-1 text-xs font-semibold text-slate-500">Local preview only</p>
+            <p className={`mt-1 text-xs font-semibold ${getHeadshotUploadClass(uploadState)}`}>
+              {getHeadshotUploadLabel(uploadState)}
+            </p>
+            {uploadedReference ? (
+              <p className="mt-1 truncate text-xs text-slate-400">Media reference: {uploadedReference}</p>
+            ) : null}
           </div>
           <button
             type="button"
@@ -501,6 +571,24 @@ function HeadshotField({
       </details>
     </div>
   );
+}
+
+function getHeadshotUploadLabel(uploadState: "idle" | "uploading" | "ready" | "error") {
+  return {
+    idle: "Local preview only",
+    uploading: "Uploading...",
+    ready: "Uploaded",
+    error: "Upload unavailable",
+  }[uploadState];
+}
+
+function getHeadshotUploadClass(uploadState: "idle" | "uploading" | "ready" | "error") {
+  return {
+    idle: "text-slate-500",
+    uploading: "text-blue-800",
+    ready: "text-emerald-800",
+    error: "text-orange-800",
+  }[uploadState];
 }
 
 function RatioGlyph({
