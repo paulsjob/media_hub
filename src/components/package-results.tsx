@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icons";
 import { CollapsibleSection, SecondaryButton, StatusPill } from "@/components/ui";
 import type { StatusPillLabel } from "@/components/ui";
@@ -14,6 +14,9 @@ export interface PackageRenderResult {
   status?: "queued" | "rendering" | "completed" | "failed" | "canceled" | string;
   progress?: number;
   errorMessage?: string;
+  pollAttempts?: number;
+  pollTimedOut?: boolean;
+  lastStatusDetails?: string;
 }
 
 interface ModeckRenderStatusResult {
@@ -24,7 +27,16 @@ interface ModeckRenderStatusResult {
   progress: number;
   temporaryDownloadUrl?: string | null;
   errorMessage?: string | null;
+  statusDebug?: {
+    renderStatusCode?: unknown;
+    renderStatusStatus?: unknown;
+    renderStatusDetails?: unknown;
+    renderStatusCurrentlyRendering?: unknown;
+  };
 }
+
+const MODECK_STATUS_POLL_INTERVAL_MS = 2500;
+const MODECK_STATUS_MAX_ATTEMPTS = 120;
 
 export function PackageResults({
   stills,
@@ -40,10 +52,13 @@ export function PackageResults({
   initialRenderResults: Record<string, PackageRenderResult>;
   packageName: string;
   packageContext: {
+    template?: string;
     quote?: string;
     speakerName?: string;
     speakerTitle?: string;
     contextLine?: string;
+    headshotFilename?: string;
+    brand?: string;
     previewApproved: boolean;
     generatedAt: string;
   };
@@ -53,6 +68,7 @@ export function PackageResults({
   const [renderResults, setRenderResults] = useState(initialRenderResults);
   const [downloadedOutputIds, setDownloadedOutputIds] = useState<string[]>([]);
   const [packageDownloaded, setPackageDownloaded] = useState(false);
+  const [approvedPreviewThumbnails, setApprovedPreviewThumbnails] = useState<Record<string, string>>({});
   const outputs = useMemo(() => [...stills, ...videos], [stills, videos]);
   const resultList = useMemo(() => Object.values(renderResults), [renderResults]);
   const deliveryItems = useMemo(
@@ -64,20 +80,24 @@ export function PackageResults({
       })),
     [outputs, renderResults],
   );
-  const readyFileCount = deliveryItems.filter((item) => item.state === "Ready").length;
+  const readyFileCount = deliveryItems.filter((item) => {
+    const downloadUrl = getSafeDownloadUrl(item.result?.temporaryDownloadUrl ?? "", item.result?.editId);
+
+    return isResultDownloadable(item.result, downloadUrl);
+  }).length;
   const placeholderFileCount = deliveryItems.filter((item) => item.state === "Placeholder").length;
   const readyDownloads = useMemo(
     () =>
       outputs
         .map((output) => {
           const result = renderResults[output.id];
-          const downloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
+          const downloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId);
 
           return isResultDownloadable(result, downloadUrl)
             ? {
                 output,
                 downloadUrl,
-                filename: getDownloadFilename(packageName, output, result?.source),
+                filename: getDownloadFilename(packageName, output),
                 source: result?.source,
               }
             : null;
@@ -92,79 +112,81 @@ export function PackageResults({
         ),
     [outputs, packageName, renderResults],
   );
-  const pendingModeckRenders = useMemo(
-    () =>
-      resultList.filter(
-        (result) =>
-          result.source === "modeck-render" &&
-          result.editId &&
-          !["completed", "failed", "canceled"].includes(result.status ?? ""),
-      ),
-    [resultList],
-  );
+  const pendingModeckRenders = resultList.filter(isPendingModeckRender);
 
   useEffect(() => {
-    if (pendingModeckRenders.length === 0) {
-      return;
-    }
+    const timeoutId = window.setTimeout(() => {
+      if (!packageContext.previewApproved) {
+        setApprovedPreviewThumbnails({});
+        return;
+      }
 
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(async () => {
-      await Promise.all(
-        pendingModeckRenders.map(async (render) => {
-          try {
-            const params = new URLSearchParams({
-              editId: render.editId,
-              outputId: render.outputId,
-            });
-            const response = await fetch(`/api/modeck/render/status?${params.toString()}`, {
-              signal: controller.signal,
-            });
-            const data = (await response.json()) as Partial<ModeckRenderStatusResult>;
+      setApprovedPreviewThumbnails(readApprovedPreviewThumbnails(outputs, packageContext));
+    }, 0);
 
-            setRenderResults((current) => ({
-              ...current,
-              [render.outputId]: {
-                ...current[render.outputId],
-                status: response.ok ? data.status ?? current[render.outputId]?.status : "failed",
-                progress: response.ok ? data.progress ?? current[render.outputId]?.progress : undefined,
-                temporaryDownloadUrl:
-                  response.ok && data.temporaryDownloadUrl
-                    ? data.temporaryDownloadUrl
-                    : current[render.outputId]?.temporaryDownloadUrl,
-                errorMessage:
-                  response.ok
-                    ? data.errorMessage ?? current[render.outputId]?.errorMessage
-                    : "Could not refresh render status.",
-              },
-            }));
-          } catch (error) {
-            if (controller.signal.aborted) {
-              return;
-            }
+    return () => window.clearTimeout(timeoutId);
+  }, [outputs, packageContext]);
 
-            setRenderResults((current) => ({
-              ...current,
-              [render.outputId]: {
-                ...current[render.outputId],
-                status: "failed",
-              errorMessage:
-                  error instanceof Error ? error.message : "Could not refresh render status.",
-              },
-            }));
-          }
-        }),
-      );
-    }, 2500);
+  const updateRenderStatus = useCallback((
+    outputId: string,
+    update: Partial<ModeckRenderStatusResult>,
+    responseOk: boolean,
+    resetPollAttempts = false,
+  ) => {
+    setRenderResults((current) => {
+      const currentResult = current[outputId];
 
-    return () => {
-      controller.abort();
-      window.clearTimeout(timeoutId);
-    };
-  }, [pendingModeckRenders]);
+      return {
+        ...current,
+        [outputId]: {
+          ...currentResult,
+          status: responseOk ? update.status ?? currentResult?.status : "failed",
+          progress: responseOk ? update.progress ?? currentResult?.progress : undefined,
+          pollAttempts: resetPollAttempts ? 0 : (currentResult?.pollAttempts ?? 0) + 1,
+          pollTimedOut: false,
+          lastStatusDetails: getStatusDetails(update),
+          temporaryDownloadUrl:
+            responseOk && update.temporaryDownloadUrl
+              ? update.temporaryDownloadUrl
+              : currentResult?.temporaryDownloadUrl ?? "",
+          errorMessage: responseOk
+            ? update.errorMessage || undefined
+            : "Could not refresh render status.",
+        },
+      };
+    });
+  }, []);
+  const markRenderPollTimedOut = useCallback((outputId: string) => {
+    setRenderResults((current) => {
+      const currentResult = current[outputId];
+
+      return {
+        ...current,
+        [outputId]: {
+          ...currentResult,
+          status: currentResult?.status ?? "rendering",
+          pollTimedOut: true,
+          lastStatusDetails: currentResult?.lastStatusDetails || "Still rendering.",
+        },
+      };
+    });
+  }, []);
+  const refreshRenderStatus = useCallback(async (render: PackageRenderResult) => {
+    const data = await fetchRenderStatus(render);
+    updateRenderStatus(render.outputId, data.update, data.responseOk, true);
+  }, [updateRenderStatus]);
 
   return (
     <>
+      {pendingModeckRenders.map((render) => (
+        <ModeckRenderStatusPoller
+          key={`${render.outputId}:${render.editId}`}
+          render={render}
+          onStatus={updateRenderStatus}
+          onMaxAttempts={markRenderPollTimedOut}
+        />
+      ))}
+
       <PackageReviewHeader
         packageContext={packageContext}
         outputs={outputs}
@@ -183,8 +205,16 @@ export function PackageResults({
               key={output.id}
               output={output}
               result={renderResults[output.id]}
+              approvedThumbnailUrl={approvedPreviewThumbnails[output.id] ?? ""}
               downloaded={downloadedOutputIds.includes(output.id)}
               packageName={packageName}
+              onRefreshStatus={() => {
+                const result = renderResults[output.id];
+
+                if (result) {
+                  void refreshRenderStatus(result);
+                }
+              }}
               onDownloaded={() =>
                 setDownloadedOutputIds((current) =>
                   current.includes(output.id) ? current : [...current, output.id],
@@ -223,6 +253,13 @@ export function PackageResults({
               result={renderResults[output.id]}
               downloaded={downloadedOutputIds.includes(output.id)}
               packageName={packageName}
+              onRefreshStatus={() => {
+                const result = renderResults[output.id];
+
+                if (result) {
+                  void refreshRenderStatus(result);
+                }
+              }}
               onDownloaded={() =>
                 setDownloadedOutputIds((current) =>
                   current.includes(output.id) ? current : [...current, output.id],
@@ -236,23 +273,171 @@ export function PackageResults({
   );
 }
 
+function ModeckRenderStatusPoller({
+  render,
+  onStatus,
+  onMaxAttempts,
+}: {
+  render: PackageRenderResult;
+  onStatus: (outputId: string, update: Partial<ModeckRenderStatusResult>, responseOk: boolean) => void;
+  onMaxAttempts: (outputId: string) => void;
+}) {
+  useEffect(() => {
+    const attempt = (render.pollAttempts ?? 0) + 1;
+
+    if (attempt > MODECK_STATUS_MAX_ATTEMPTS) {
+      logModeckPoll({
+        render,
+        attempt,
+        status: render.status ?? "rendering",
+        willContinue: false,
+        reason: "max_attempts",
+      });
+      onMaxAttempts(render.outputId);
+      return;
+    }
+
+    let canceled = false;
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const data = await fetchRenderStatus(render);
+        const willContinue = shouldContinuePolling(data.update, data.responseOk, attempt);
+
+        logModeckPoll({
+          render,
+          attempt,
+          update: data.update,
+          responseOk: data.responseOk,
+          willContinue,
+        });
+
+        if (!canceled) {
+          onStatus(render.outputId, data.update, data.responseOk);
+        }
+      } catch (error) {
+        logModeckPoll({
+          render,
+          attempt,
+          status: "failed",
+          willContinue: false,
+          reason: error instanceof Error ? error.message : "poll_error",
+        });
+
+        if (!canceled) {
+          onStatus(
+            render.outputId,
+            {
+              status: "failed",
+              errorMessage: error instanceof Error ? error.message : "Could not refresh render status.",
+            },
+            false,
+          );
+        }
+      }
+    }, MODECK_STATUS_POLL_INTERVAL_MS);
+
+    return () => {
+      canceled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [render, onMaxAttempts, onStatus]);
+
+  return null;
+}
+
+async function fetchRenderStatus(render: PackageRenderResult) {
+  const params = new URLSearchParams({
+    editId: render.editId,
+    outputId: render.outputId,
+  });
+  const response = await fetch(`/api/modeck/render/status?${params.toString()}`);
+  const update = (await response.json()) as Partial<ModeckRenderStatusResult>;
+
+  return {
+    update,
+    responseOk: response.ok,
+  };
+}
+
+function shouldContinuePolling(
+  update: Partial<ModeckRenderStatusResult>,
+  responseOk: boolean,
+  attempt: number,
+) {
+  if (!responseOk || attempt >= MODECK_STATUS_MAX_ATTEMPTS) {
+    return false;
+  }
+
+  if (update.status === "completed" && update.temporaryDownloadUrl) {
+    return false;
+  }
+
+  return !["failed", "canceled"].includes(update.status ?? "");
+}
+
+function getStatusDetails(update: Partial<ModeckRenderStatusResult>) {
+  const details = update.statusDebug?.renderStatusDetails;
+
+  return typeof details === "string" ? details : undefined;
+}
+
+function logModeckPoll({
+  render,
+  attempt,
+  update,
+  responseOk = true,
+  status,
+  willContinue,
+  reason,
+}: {
+  render: PackageRenderResult;
+  attempt: number;
+  update?: Partial<ModeckRenderStatusResult>;
+  responseOk?: boolean;
+  status?: string;
+  willContinue: boolean;
+  reason?: string;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-render-poll]", {
+    outputId: render.outputId,
+    editId: render.editId,
+    attempt,
+    normalizedStatus: update?.status ?? status,
+    renderStatusCode: update?.statusDebug?.renderStatusCode ?? null,
+    renderStatusStatus: update?.statusDebug?.renderStatusStatus ?? null,
+    renderStatusDetails: update?.statusDebug?.renderStatusDetails ?? render.lastStatusDetails ?? null,
+    currentlyRendering: update?.statusDebug?.renderStatusCurrentlyRendering ?? null,
+    responseOk,
+    willContinue,
+    reason: reason ?? null,
+  });
+}
+
 function VisualOutputPreviewCard({
   output,
   result,
+  approvedThumbnailUrl,
   downloaded,
   packageName,
+  onRefreshStatus,
   onDownloaded,
 }: {
   output: MvpOutputFormat;
   result?: PackageRenderResult;
+  approvedThumbnailUrl: string;
   downloaded: boolean;
   packageName: string;
+  onRefreshStatus: () => void;
   onDownloaded: () => void;
 }) {
-  const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
+  const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId);
   const state = getDeliveryState(result);
   const canDownload = isResultDownloadable(result, resolvedDownloadUrl);
-  const thumbnailUrl = getPreviewThumbnailUrl(output, result, resolvedDownloadUrl, state);
+  const thumbnailUrl = getPreviewThumbnailUrl(output, result, approvedThumbnailUrl, state);
   const previewHelp = getPreviewHelp(state);
   const [downloadError, setDownloadError] = useState("");
 
@@ -264,7 +449,7 @@ function VisualOutputPreviewCard({
     setDownloadError("");
 
     try {
-      await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output, result?.source));
+      await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output));
       onDownloaded();
     } catch {
       setDownloadError("File unavailable.");
@@ -290,6 +475,18 @@ function VisualOutputPreviewCard({
       <PreviewFrame output={output} state={state} thumbnailUrl={thumbnailUrl} />
 
       {previewHelp ? <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{previewHelp}</p> : <div className="flex-1" />}
+      {result?.pollTimedOut ? (
+        <div className="mt-2">
+          <p className="text-sm font-semibold text-orange-800">Still rendering. Try refresh status.</p>
+          <button
+            type="button"
+            onClick={onRefreshStatus}
+            className="mt-2 inline-flex min-h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+          >
+            Refresh status
+          </button>
+        </div>
+      ) : null}
 
       <div className="mt-4">
         <OutputDownloadAction
@@ -330,12 +527,12 @@ function PreviewFrame({
         {thumbnailUrl ? null : (
           <div className="absolute inset-0 bg-[var(--powder-blue)]" aria-hidden="true" />
         )}
-        <div className="relative grid gap-1 px-4">
-          <p className="text-lg font-semibold text-[#06153a]">{output.aspectLabel}</p>
-          <p className="text-xs text-slate-500">
-            {state === "Rendering" ? "Preview pending" : output.type === "video" ? "Video output" : "Still output"}
-          </p>
-        </div>
+        {thumbnailUrl ? null : (
+          <div className="relative grid gap-1 px-4">
+            <p className="text-lg font-semibold text-[#06153a]">{output.aspectLabel}</p>
+            <p className="text-xs text-slate-500">{getPreviewFrameLabel(output, state)}</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -834,8 +1031,7 @@ function DownloadAllPackage({
   } | null>(null);
   const readyCount = files.length;
   const disabled = readyCount === 0 || isDownloading;
-  const includesPlaceholders = files.some((file) => file.source === "mock-placeholder");
-  const allOutputsReady = readyCount === totalOutputs && !includesPlaceholders;
+  const allOutputsReady = readyCount === totalOutputs;
   const buttonLabel = downloaded ? "Downloaded ZIP" : allOutputsReady ? "Download All Package" : "Download Ready Files";
 
   async function downloadAll() {
@@ -900,9 +1096,7 @@ function DownloadAllPackage({
         </p>
         <p className="mt-1 text-sm text-slate-600">
           {readyCount > 0
-            ? includesPlaceholders
-              ? "Includes ready files and connected previews."
-              : "Rendering or unavailable files are skipped."
+            ? "Only completed connected renders are downloaded."
             : "Available when at least one output is ready."}
         </p>
         {downloaded ? <p className="mt-2 text-sm font-semibold text-emerald-800">Package downloaded.</p> : null}
@@ -937,15 +1131,17 @@ function DeliveryOutputCard({
   result,
   downloaded,
   packageName,
+  onRefreshStatus,
   onDownloaded,
 }: {
   output: MvpOutputFormat;
   result?: PackageRenderResult;
   downloaded: boolean;
   packageName: string;
+  onRefreshStatus: () => void;
   onDownloaded: () => void;
 }) {
-  const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId, output.id);
+  const resolvedDownloadUrl = getSafeDownloadUrl(result?.temporaryDownloadUrl ?? "", result?.editId);
   const state = getDeliveryState(result);
   const canDownload = isResultDownloadable(result, resolvedDownloadUrl);
   const showProgress = result?.source === "modeck-render" && ["queued", "rendering"].includes(result.status ?? "");
@@ -959,7 +1155,7 @@ function DeliveryOutputCard({
     setDownloadError("");
 
     try {
-      await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output, result?.source));
+      await downloadUrl(resolvedDownloadUrl, getDownloadFilename(packageName, output));
       onDownloaded();
     } catch {
       setDownloadError("File unavailable.");
@@ -997,6 +1193,9 @@ function DeliveryOutputCard({
             </div>
           </div>
         ) : null}
+        {result?.pollTimedOut ? (
+          <p className="mt-2 text-sm font-semibold text-orange-800">Still rendering. Try refresh status.</p>
+        ) : null}
       </div>
       <div className="flex flex-col gap-2 md:items-end">
         <OutputDownloadAction
@@ -1005,6 +1204,15 @@ function DeliveryOutputCard({
           unavailableLabel={getUnavailableActionLabel(state)}
           onClick={downloadFile}
         />
+        {result?.pollTimedOut ? (
+          <button
+            type="button"
+            onClick={onRefreshStatus}
+            className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
+          >
+            Refresh status
+          </button>
+        ) : null}
         {downloadError ? <p className="text-sm font-semibold text-orange-800">{downloadError}</p> : null}
       </div>
     </div>
@@ -1040,6 +1248,105 @@ function OutputThumbnail({
 
 type DeliveryState = "Ready" | "Rendering" | "Placeholder" | "Unavailable" | "Failed";
 
+function readApprovedPreviewThumbnails(
+  outputs: MvpOutputFormat[],
+  packageContext: {
+    template?: string;
+    quote?: string;
+    speakerName?: string;
+    speakerTitle?: string;
+    contextLine?: string;
+    headshotFilename?: string;
+    brand?: string;
+  },
+) {
+  const thumbnails: Record<string, string> = {};
+
+  if (typeof window === "undefined") {
+    return thumbnails;
+  }
+
+  outputs.forEach((output) => {
+    const storageKey = getApprovedPreviewStorageKey({
+      template: packageContext.template ?? "quote-card",
+      outputId: output.id,
+      quote: packageContext.quote ?? "",
+      speakerName: packageContext.speakerName ?? "",
+      speakerTitle: packageContext.speakerTitle ?? "",
+      contextLine: packageContext.contextLine ?? "",
+      headshotFilename: packageContext.headshotFilename ?? "",
+      brand: String(normalizeQuoteCardBrandValue(packageContext.brand ?? "2")),
+      width: output.width,
+      height: output.height,
+      aspectLabel: output.aspectLabel,
+    });
+
+    try {
+      const cached = window.sessionStorage.getItem(storageKey);
+
+      if (!cached) {
+        return;
+      }
+
+      const parsed = JSON.parse(cached) as { outputId?: string; imageSrc?: string };
+
+      if (parsed.outputId === output.id && typeof parsed.imageSrc === "string") {
+        thumbnails[output.id] = parsed.imageSrc;
+      }
+    } catch {
+      // Missing thumbnail cache should not affect package readiness or downloads.
+    }
+  });
+
+  return thumbnails;
+}
+
+function getApprovedPreviewStorageKey(parts: {
+  template: string;
+  outputId: string;
+  quote: string;
+  speakerName: string;
+  speakerTitle: string;
+  contextLine: string;
+  headshotFilename: string;
+  brand: string;
+  width: number;
+  height: number;
+  aspectLabel: string;
+}) {
+  return `modeck-approved-preview:${JSON.stringify(parts)}`;
+}
+
+function normalizeQuoteCardBrandValue(value: string | number | undefined) {
+  if (typeof value === "string") {
+    const normalizedLabel = value.trim().toLowerCase();
+
+    if (normalizedLabel === "majority democrats") {
+      return 1;
+    }
+
+    if (normalizedLabel === "the bench" || normalizedLabel === "default brand") {
+      return 2;
+    }
+  }
+
+  const parsed = typeof value === "string" ? Number(value) : value;
+
+  return parsed === 1 || parsed === 2 ? parsed : 2;
+}
+
+function isPendingModeckRender(result: PackageRenderResult) {
+  const completedWithDownload = result.status === "completed" && Boolean(result.temporaryDownloadUrl);
+
+  return (
+    result.source === "modeck-render" &&
+    Boolean(result.editId) &&
+    !result.pollTimedOut &&
+    !completedWithDownload &&
+    !["failed", "canceled"].includes(result.status ?? "")
+  );
+}
+
 function getDeliveryState(result?: PackageRenderResult): DeliveryState {
   if (!result) {
     return "Rendering";
@@ -1057,11 +1364,20 @@ function getDeliveryState(result?: PackageRenderResult): DeliveryState {
     return "Placeholder";
   }
 
-  if (result.source === "modeck-render" && result.status !== "completed") {
+  if (result.source === "modeck-preview") {
+    return "Placeholder";
+  }
+
+  if (
+    result.source === "modeck-render" &&
+    (result.status !== "completed" || !result.temporaryDownloadUrl)
+  ) {
     return "Rendering";
   }
 
-  return "Ready";
+  return result.source === "modeck-render" && result.status === "completed" && result.temporaryDownloadUrl
+    ? "Ready"
+    : "Placeholder";
 }
 
 function getStateLabel(state: DeliveryState): StatusPillLabel {
@@ -1088,19 +1404,31 @@ function getStateHelp(state: DeliveryState) {
 
 function getPreviewHelp(state: DeliveryState) {
   return {
-    Ready: "",
+    Ready: "Render ready.",
     Rendering: "",
-    Placeholder: "Format not connected yet.",
+    Placeholder: "Preview placeholder only. Final MoDeck template not connected.",
     Unavailable: "Render unavailable.",
     Failed: "Render did not complete.",
   }[state];
+}
+
+function getPreviewFrameLabel(output: MvpOutputFormat, state: DeliveryState) {
+  if (state === "Rendering") {
+    return "Preview pending";
+  }
+
+  if (state === "Ready") {
+    return "Render ready";
+  }
+
+  return output.type === "video" ? "Video output" : "Still output";
 }
 
 function getUnavailableActionLabel(state: DeliveryState) {
   return {
     Ready: "File unavailable",
     Rendering: "Rendering",
-    Placeholder: "File unavailable",
+    Placeholder: "Not connected",
     Unavailable: "File unavailable",
     Failed: "File unavailable",
   }[state];
@@ -1109,18 +1437,18 @@ function getUnavailableActionLabel(state: DeliveryState) {
 function getPreviewThumbnailUrl(
   output: MvpOutputFormat,
   result: PackageRenderResult | undefined,
-  resolvedDownloadUrl: string,
+  approvedThumbnailUrl: string,
   state: DeliveryState,
 ) {
-  if (output.type !== "still" || state !== "Ready" || !resolvedDownloadUrl) {
+  if (output.type !== "still" || !approvedThumbnailUrl) {
     return "";
   }
 
-  if (result?.source === "mock-placeholder") {
+  if (!result || result.source !== "modeck-render" || ["Failed", "Unavailable"].includes(state)) {
     return "";
   }
 
-  return resolvedDownloadUrl;
+  return approvedThumbnailUrl;
 }
 
 function isResultDownloadable(result: PackageRenderResult | undefined, resolvedDownloadUrl: string) {
@@ -1128,7 +1456,15 @@ function isResultDownloadable(result: PackageRenderResult | undefined, resolvedD
     return false;
   }
 
-  return result.source !== "modeck-render" || result.status === "completed";
+  if (result.source !== "modeck-render" || result.status !== "completed") {
+    return false;
+  }
+
+  if (result.editId?.startsWith("mock-edit")) {
+    return false;
+  }
+
+  return true;
 }
 
 async function downloadUrl(url: string, filename: string) {
@@ -1157,29 +1493,24 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(objectUrl);
 }
 
-function getDownloadFilename(
-  packageName: string,
-  output: MvpOutputFormat,
-  source: PackageRenderResult["source"] | undefined,
-) {
-  const extension = source === "mock-placeholder" && output.type === "video" ? "txt" : output.type === "video" ? "mp4" : "png";
+function getDownloadFilename(packageName: string, output: MvpOutputFormat) {
+  const extension = output.type === "video" ? "mp4" : "png";
 
   return `${packageName}-${output.type}-${output.label}.${extension}`;
 }
 
-function getSafeDownloadUrl(downloadUrl: string, editId: string | undefined, outputId: string) {
+function getSafeDownloadUrl(downloadUrl: string, editId: string | undefined) {
   if (!downloadUrl) {
     return "";
   }
 
-  if (!downloadUrl.includes("mock.modeck.local")) {
-    return downloadUrl;
+  if (editId?.startsWith("mock-edit") || downloadUrl.includes("mock.modeck.local")) {
+    return "";
   }
 
-  const query = new URLSearchParams({
-    editId: editId ?? "mock-edit",
-    outputId,
-  });
+  if (downloadUrl.includes("/api/mock-modeck/download")) {
+    return "";
+  }
 
-  return `/api/mock-modeck/download?${query.toString()}`;
+  return downloadUrl;
 }

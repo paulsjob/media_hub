@@ -30,27 +30,103 @@ interface ModeckPreviewSnapshot {
   imageSize: { width: number; height: number } | null;
 }
 
+interface ModeckPreviewRequest {
+  previewCacheKey: string;
+  storageKey: string;
+  templateId: string;
+  outputId: string;
+  activePreviewIndex: number;
+  width: number;
+  height: number;
+  aspectLabel: string;
+  quote: string;
+  speakerName: string;
+  speakerTitle: string;
+  contextLine: string;
+  headshot: string;
+  brand: string;
+}
+
+interface PreviewOption {
+  output: MvpOutputFormat;
+  label: string;
+  ratio: PreviewRatio;
+}
+
+const connectedPreviewOutputIds = new Set(["still-1920x1080", "still-1080x1920"]);
+const previewCache = new Map<string, ModeckPreviewSnapshot>();
+const previewInFlight = new Map<string, Promise<ModeckPreviewSnapshot>>();
+
+function buildPreviewRequest(
+  option: PreviewOption,
+  activePreviewIndex: number,
+  content: PreviewContent,
+  templateId: string,
+): ModeckPreviewRequest | null {
+  if (!connectedPreviewOutputIds.has(option.output.id)) {
+    return null;
+  }
+
+  const quote = content.quote ?? "";
+  const speakerName = content.speakerName ?? "";
+  const speakerTitle = content.speakerTitle ?? "";
+  const contextLine = content.contextLine ?? "";
+  const headshot = content.headshot ?? "";
+  const brand = String(normalizeQuoteCardBrandValue(content.brand ?? "2"));
+  const keyParts = {
+    template: templateId,
+    outputId: option.output.id,
+    quote,
+    speakerName,
+    speakerTitle,
+    contextLine,
+    headshotFilename: headshot,
+    brand,
+    width: option.ratio.width,
+    height: option.ratio.height,
+    aspectLabel: option.ratio.aspectLabel,
+  };
+  const previewCacheKey = JSON.stringify(keyParts);
+
+  return {
+    previewCacheKey,
+    storageKey: getApprovedPreviewStorageKey(keyParts),
+    templateId,
+    outputId: option.output.id,
+    activePreviewIndex,
+    width: option.ratio.width,
+    height: option.ratio.height,
+    aspectLabel: option.ratio.aspectLabel,
+    quote,
+    speakerName,
+    speakerTitle,
+    contextLine,
+    headshot,
+    brand,
+  };
+}
+
 export function PreviewGrid({
   outputs,
   selectedOutputIds,
   activeOutputId,
   content,
   onActiveOutputChange,
+  onPreviewStateChange,
+  templateId = "quote-card",
 }: {
   outputs: MvpOutputFormat[];
   selectedOutputIds: string[];
   activeOutputId: string;
   content: PreviewContent;
   onActiveOutputChange: (outputId: string) => void;
+  onPreviewStateChange?: (state: {
+    currentPreviewSignature: string;
+    allConnectedPreviewsReady: boolean;
+  }) => void;
+  templateId?: string;
 }) {
-  const [modeckPreview, setModeckPreview] = useState<ModeckPreviewSnapshot>({
-    signature: "",
-    state: "idle",
-    imageSrc: null,
-    message: "",
-    durationMs: null,
-    imageSize: null,
-  });
+  const [modeckPreviews, setModeckPreviews] = useState<Record<string, ModeckPreviewSnapshot>>({});
   const previewOptions = useMemo(
     () => outputs.filter((output) => selectedOutputIds.includes(output.id)).map(outputToPreviewOption),
     [outputs, selectedOutputIds],
@@ -60,25 +136,30 @@ export function PreviewGrid({
   const activeOption = previewOptions[safeActiveIndex];
   const activeRatio = activeOption?.ratio;
   const hasMultipleRatios = previewOptions.length > 1;
-  const canUseModeckPreview = activeRatio?.aspectLabel === "16:9";
-  const requestSignature = useMemo(
+  const canUseModeckPreview = activeOption ? connectedPreviewOutputIds.has(activeOption.output.id) : false;
+  const previewRequests = useMemo(
     () =>
-      activeRatio
-        ? JSON.stringify({
-            ratio: activeRatio.key,
-            width: activeRatio.width,
-            height: activeRatio.height,
-            quote: content.quote,
-            speakerName: content.speakerName,
-            speakerTitle: content.speakerTitle,
-            contextLine: content.contextLine,
-            headshot: content.headshot,
-            headshotPreviewUrl: content.headshotPreviewUrl,
-            brand: content.brand ?? "2",
-          })
-        : "",
-    [activeRatio, content],
+      previewOptions
+        .map((option, index) => buildPreviewRequest(option, index, content, templateId))
+        .filter((request): request is ModeckPreviewRequest => Boolean(request)),
+    [previewOptions, content, templateId],
   );
+  const activePreviewRequest = activeOption
+    ? previewRequests.find((request) => request.outputId === activeOption.output.id)
+    : undefined;
+  const currentPreviewSignature = useMemo(
+    () => JSON.stringify(previewRequests.map((request) => request.previewCacheKey).sort()),
+    [previewRequests],
+  );
+  const requestSignature = activePreviewRequest?.previewCacheKey ?? "";
+  const cachedModeckPreview = requestSignature
+    ? modeckPreviews[requestSignature] ?? previewCache.get(requestSignature)
+    : undefined;
+  const allConnectedPreviewsReady = previewRequests.every((previewRequest) => {
+    const preview = modeckPreviews[previewRequest.previewCacheKey] ?? previewCache.get(previewRequest.previewCacheKey);
+
+    return preview?.state === "loaded" && Boolean(preview.imageSrc);
+  });
   const activeModeckPreview = useMemo<ModeckPreviewSnapshot>(() => {
     if (!activeRatio) {
       return {
@@ -96,14 +177,14 @@ export function PreviewGrid({
         signature: requestSignature,
         state: "unsupported",
         imageSrc: null,
-        message: "Local layout preview.",
+        message: "Live MoDeck preview is not connected for this output.",
         durationMs: null,
         imageSize: null,
       };
     }
 
-    if (modeckPreview.signature === requestSignature) {
-      return modeckPreview;
+    if (cachedModeckPreview) {
+      return cachedModeckPreview;
     }
 
     return {
@@ -114,89 +195,108 @@ export function PreviewGrid({
       durationMs: null,
       imageSize: null,
     };
-  }, [activeRatio, canUseModeckPreview, modeckPreview, requestSignature]);
+  }, [activeRatio, cachedModeckPreview, canUseModeckPreview, requestSignature]);
 
   useEffect(() => {
-    if (!activeRatio || !canUseModeckPreview) {
+    onPreviewStateChange?.({
+      currentPreviewSignature,
+      allConnectedPreviewsReady,
+    });
+  }, [allConnectedPreviewsReady, currentPreviewSignature, onPreviewStateChange]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production" || !activeOption) {
       return;
     }
 
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(async () => {
-      setModeckPreview({
-        signature: requestSignature,
-        state: "loading",
-        imageSrc: null,
-        message: "Rendering",
-        durationMs: null,
-        imageSize: null,
-      });
+    console.info("[modeck-preview-active]", {
+      outputId: activeOption.output.id,
+      activePreviewIndex: safeActiveIndex,
+      status: activeModeckPreview.state,
+      previewUrlReturned: Boolean(activeModeckPreview.imageSrc),
+      previewUrl: activeModeckPreview.imageSrc?.slice(0, 80) ?? null,
+      error: activeModeckPreview.state === "error" ? activeModeckPreview.message : null,
+    });
+  }, [activeModeckPreview, activeOption, safeActiveIndex]);
 
-      try {
-        const response = await fetch("/api/modeck/preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            size: `${activeRatio.width}x${activeRatio.height}`,
-            frame: 0,
-            quote: content.quote,
-            speakerName: content.speakerName,
-            speakerTitle: content.speakerTitle,
-            contextLine: content.contextLine,
-            headshotFilename: getModeckHeadshotFilename(content.headshot),
-            brand: content.brand ?? "2",
-          }),
-          signal: controller.signal,
+  useEffect(() => {
+    if (previewRequests.length === 0) {
+      return;
+    }
+
+    let mounted = true;
+
+    previewRequests.forEach((previewRequest) => {
+      const cachedPreview = previewCache.get(previewRequest.previewCacheKey);
+
+      if (cachedPreview) {
+        logPreviewCache({
+          previewRequest,
+          cache: "hit",
+          inFlight: "miss",
+          apiCalled: false,
+          status: cachedPreview.state,
         });
-        const data = (await response.json()) as ModeckPreviewResult;
-
-        if (!data.ok || !data.imageBase64) {
-          setModeckPreview({
-            signature: requestSignature,
-            state: "error",
-            imageSrc: null,
-            message:
-              data.error ??
-              data.responseSummary?.info ??
-              "Preview image was not returned, so the local preview is shown.",
-            durationMs: data.durationMs ?? null,
-            imageSize: null,
-          });
-          return;
-        }
-
-        setModeckPreview({
-          signature: requestSignature,
-          state: "loaded",
-          imageSrc: toImageSrc(data.imageBase64),
-          message: data.responseSummary?.info ?? "Preview ready.",
-          durationMs: data.durationMs ?? null,
-          imageSize: null,
-        });
-      } catch (error) {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        setModeckPreview({
-          signature: requestSignature,
-          state: "error",
-          imageSrc: null,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Preview failed, so the local preview is shown.",
-          durationMs: null,
-          imageSize: null,
-        });
+        setModeckPreviews((current) => ({
+          ...current,
+          [previewRequest.previewCacheKey]: current[previewRequest.previewCacheKey] ?? cachedPreview,
+        }));
+        return;
       }
-    }, 650);
+
+      const inFlightPreview = previewInFlight.get(previewRequest.previewCacheKey);
+
+      if (inFlightPreview) {
+        logPreviewCache({
+          previewRequest,
+          cache: "miss",
+          inFlight: "hit",
+          apiCalled: false,
+          status: "loading",
+        });
+        setModeckPreviews((current) => ({
+          ...current,
+          [previewRequest.previewCacheKey]:
+            current[previewRequest.previewCacheKey] ?? createLoadingPreview(previewRequest.previewCacheKey),
+        }));
+        inFlightPreview.then((snapshot) => {
+          if (mounted) {
+            setModeckPreviews((current) => ({ ...current, [snapshot.signature]: snapshot }));
+          }
+        });
+        return;
+      }
+
+      logPreviewCache({
+        previewRequest,
+        cache: "miss",
+        inFlight: "miss",
+        apiCalled: true,
+        status: "loading",
+      });
+      setModeckPreviews((current) => ({
+        ...current,
+        [previewRequest.previewCacheKey]:
+          current[previewRequest.previewCacheKey] ?? createLoadingPreview(previewRequest.previewCacheKey),
+      }));
+
+      const previewPromise = fetchModeckPreview(previewRequest).then((snapshot) => {
+        previewCache.set(previewRequest.previewCacheKey, snapshot);
+        previewInFlight.delete(previewRequest.previewCacheKey);
+        return snapshot;
+      });
+      previewInFlight.set(previewRequest.previewCacheKey, previewPromise);
+      previewPromise.then((snapshot) => {
+        if (mounted) {
+          setModeckPreviews((current) => ({ ...current, [snapshot.signature]: snapshot }));
+        }
+      });
+    });
 
     return () => {
-      controller.abort();
-      window.clearTimeout(timeoutId);
+      mounted = false;
     };
-  }, [activeRatio, canUseModeckPreview, content, requestSignature]);
+  }, [previewRequests]);
 
   function showPreviousPreview() {
     const nextIndex = safeActiveIndex === 0 ? previewOptions.length - 1 : safeActiveIndex - 1;
@@ -256,14 +356,20 @@ export function PreviewGrid({
             <ModeckPreviewPanel
               state={activeModeckPreview.state}
               imageSrc={activeModeckPreview.imageSrc}
+              message={activeModeckPreview.message}
               imageSize={activeModeckPreview.imageSize}
               durationMs={activeModeckPreview.durationMs}
               onImageLoad={(width, height) =>
-                setModeckPreview((current) =>
-                  current.signature === requestSignature
-                    ? { ...current, imageSize: { width, height } }
-                    : current,
-                )
+                setModeckPreviews((current) => {
+                  const preview = current[requestSignature];
+
+                  return preview
+                    ? {
+                        ...current,
+                        [requestSignature]: { ...preview, imageSize: { width, height } },
+                      }
+                    : current;
+                })
               }
             />
             {!activeModeckPreview.imageSrc && activeModeckPreview.state !== "loading" ? (
@@ -283,12 +389,14 @@ export function PreviewGrid({
 function ModeckPreviewPanel({
   state,
   imageSrc,
+  message,
   imageSize,
   durationMs,
   onImageLoad,
 }: {
   state: ModeckPreviewState;
   imageSrc: string | null;
+  message: string;
   imageSize: { width: number; height: number } | null;
   durationMs: number | null;
   onImageLoad: (width: number, height: number) => void;
@@ -318,8 +426,9 @@ function ModeckPreviewPanel({
               className={`h-2 w-2 ${state === "loading" ? "bg-[var(--navy-blue)]" : "bg-[var(--flame)]"}`}
               aria-hidden="true"
             />
-            {state === "loading" ? "Rendering" : "Preview ready"}
+            {getPreviewPanelTitle(state)}
           </div>
+          {message ? <p className="max-w-md text-sm leading-6 text-slate-700">{message}</p> : null}
         </div>
       </div>
     );
@@ -368,6 +477,155 @@ function ModeckPreviewPanel({
   );
 }
 
+function createLoadingPreview(previewCacheKey: string): ModeckPreviewSnapshot {
+  return {
+    signature: previewCacheKey,
+    state: "loading",
+    imageSrc: null,
+    message: "Rendering",
+    durationMs: null,
+    imageSize: null,
+  };
+}
+
+async function fetchModeckPreview(previewRequest: ModeckPreviewRequest): Promise<ModeckPreviewSnapshot> {
+  try {
+    const response = await fetch("/api/modeck/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        outputId: previewRequest.outputId,
+        size: `${previewRequest.width}x${previewRequest.height}`,
+        frame: 0,
+        quote: previewRequest.quote,
+        speakerName: previewRequest.speakerName,
+        speakerTitle: previewRequest.speakerTitle,
+        contextLine: previewRequest.contextLine,
+        headshotFilename: getModeckHeadshotFilename(previewRequest.headshot),
+        brand: previewRequest.brand,
+      }),
+    });
+    const data = (await response.json()) as ModeckPreviewResult;
+
+    if (!data.ok || !data.imageBase64) {
+      const message =
+        data.error ??
+        data.responseSummary?.info ??
+        "Preview image was not returned.";
+
+      return {
+        signature: previewRequest.previewCacheKey,
+        state: "error",
+        imageSrc: null,
+        message,
+        durationMs: data.durationMs ?? null,
+        imageSize: null,
+      };
+    }
+
+    const imageSrc = toImageSrc(data.imageBase64);
+    storeApprovedPreviewThumbnail(previewRequest, imageSrc);
+
+    return {
+      signature: previewRequest.previewCacheKey,
+      state: "loaded",
+      imageSrc,
+      message: data.responseSummary?.info ?? "Preview ready.",
+      durationMs: data.durationMs ?? null,
+      imageSize: null,
+    };
+  } catch (error) {
+    return {
+      signature: previewRequest.previewCacheKey,
+      state: "error",
+      imageSrc: null,
+      message: error instanceof Error ? error.message : "Preview failed.",
+      durationMs: null,
+      imageSize: null,
+    };
+  }
+}
+
+function logPreviewCache({
+  previewRequest,
+  cache,
+  inFlight,
+  apiCalled,
+  status,
+}: {
+  previewRequest: ModeckPreviewRequest;
+  cache: "hit" | "miss";
+  inFlight: "hit" | "miss";
+  apiCalled: boolean;
+  status: ModeckPreviewState | "loading";
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-preview-cache]", {
+    previewCacheKey: previewRequest.previewCacheKey,
+    cache,
+    inFlight,
+    outputId: previewRequest.outputId,
+    activePreviewIndex: previewRequest.activePreviewIndex,
+    apiCalled,
+    status,
+  });
+}
+
+function storeApprovedPreviewThumbnail(previewRequest: ModeckPreviewRequest, imageSrc: string) {
+  try {
+    window.sessionStorage.setItem(
+      previewRequest.storageKey,
+      JSON.stringify({
+        outputId: previewRequest.outputId,
+        imageSrc,
+        width: previewRequest.width,
+        height: previewRequest.height,
+        aspectLabel: previewRequest.aspectLabel,
+        generatedAt: new Date().toISOString(),
+      }),
+    );
+  } catch {
+    // Preview thumbnails are a UI enhancement; rendering and downloads should continue without storage.
+  }
+}
+
+function getApprovedPreviewStorageKey(parts: {
+  template: string;
+  outputId: string;
+  quote: string;
+  speakerName: string;
+  speakerTitle: string;
+  contextLine: string;
+  headshotFilename: string;
+  brand: string;
+  width: number;
+  height: number;
+  aspectLabel: string;
+}) {
+  return `modeck-approved-preview:${JSON.stringify(parts)}`;
+}
+
+function normalizeQuoteCardBrandValue(value: string | number | undefined) {
+  if (typeof value === "string") {
+    const normalizedLabel = value.trim().toLowerCase();
+
+    if (normalizedLabel === "majority democrats") {
+      return 1;
+    }
+
+    if (normalizedLabel === "the bench" || normalizedLabel === "default brand") {
+      return 2;
+    }
+  }
+
+  const parsed = typeof value === "string" ? Number(value) : value;
+
+  return parsed === 1 || parsed === 2 ? parsed : 2;
+}
+
 function getPreviewStatus(state: ModeckPreviewState) {
   if (state === "loading") {
     return "updating";
@@ -388,7 +646,23 @@ function getModeckHeadshotFilename(value: string) {
   return value.trim();
 }
 
-function outputToPreviewOption(output: MvpOutputFormat) {
+function getPreviewPanelTitle(state: ModeckPreviewState) {
+  if (state === "loading") {
+    return "Rendering";
+  }
+
+  if (state === "unsupported") {
+    return "Local preview";
+  }
+
+  if (state === "error") {
+    return "Preview unavailable";
+  }
+
+  return "Preview ready";
+}
+
+function outputToPreviewOption(output: MvpOutputFormat): PreviewOption {
   return {
     output,
     label: output.type === "video" ? `Video ${output.label}` : output.label,

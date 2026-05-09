@@ -1,3 +1,12 @@
+import {
+  buildQuoteBoxOptions,
+  forceNumericQuoteCardBrandOption,
+  MODECK_QUOTE_BOX_TEST_DECK,
+  MODECK_QUOTE_BOX_TEST_MOGRT,
+  normalizeQuoteCardBrandValue,
+  type ModeckQuoteBoxOption,
+} from "@/lib/modeck/quote-box-test";
+
 export const dynamic = "force-dynamic";
 
 interface ModeckPreviewTestRequest {
@@ -11,6 +20,7 @@ interface ModeckPreviewTestRequest {
   contextLine: string;
   headshotFilename: string;
   brand: string;
+  outputId: string;
 }
 
 interface ModeckPreviewOption {
@@ -18,6 +28,27 @@ interface ModeckPreviewOption {
   type: "text" | "multiline_text" | "media_replacement";
   value: string | number;
 }
+
+type ModeckPreviewOutputConfig = {
+  mogrt: string;
+  tuning?: Parameters<typeof buildQuoteBoxOptions>[1];
+};
+
+const previewOutputConfigs: Record<string, ModeckPreviewOutputConfig> = {
+  "16:9": {
+    mogrt: MODECK_QUOTE_BOX_TEST_MOGRT,
+  },
+  "9:16": {
+    mogrt: "MD_Quote_Card_9x16",
+    tuning: {
+      quoteFontSize: 100,
+      quoteLineSpacing: -40,
+      quotePositionX: 120,
+      quotePositionXName: "QUOTE_POSITION_x" as const,
+      quotePositionY: 325,
+    },
+  },
+};
 
 export async function POST(request: Request) {
   const apiKey = process.env.MODECK_API_KEY;
@@ -50,66 +81,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const templateName = body.deck?.trim() || "MoDeck Quote Box Test 002";
-  const mogrtName = body.mogrt?.trim() || "MoDeck Quote Box Test 002";
+  const previewConfig = previewOutputConfigs[size.ratio] ?? previewOutputConfigs["16:9"];
+  const templateName = body.deck?.trim() || MODECK_QUOTE_BOX_TEST_DECK;
+  const mogrtName = body.mogrt?.trim() || previewConfig.mogrt;
   const headshotFilename = body.headshotFilename?.trim() ?? "";
-  const brand = normalizeBrand(body.brand);
-
-  const options: ModeckPreviewOption[] = [
-    {
-      name: "QUOTE_TEXT",
-      type: "multiline_text",
-      value: body.quote ?? "",
-    },
-    {
-      name: "SPEAKER_NAME",
-      type: "text",
-      value: body.speakerName ?? "",
-    },
-    {
-      name: "SPEAKER_TITLE",
-      type: "text",
-      value: body.speakerTitle ?? "",
-    },
-    {
-      name: "CONTEXT_LINE",
-      type: "text",
-      value: body.contextLine ?? "",
-    },
-    {
-      name: "BRAND",
-      type: "text",
-      value: brand,
-    },
-    {
-      name: "QUOTE_FONT_SIZE",
-      type: "text",
-      value: 75,
-    },
-    {
-      name: "QUOTE_LINE_SPACING",
-      type: "text",
-      value: -64,
-    },
-    {
-      name: "QUOTE_POSITION_X",
-      type: "text",
-      value: 200,
-    },
-    {
-      name: "QUOTE_POSITION_y",
-      type: "text",
-      value: 342,
-    },
-  ];
-
-  if (headshotFilename) {
-    options.push({
-      name: "HEADSHOT",
-      type: "media_replacement",
-      value: headshotFilename,
-    });
-  }
+  const fields = {
+    quote: body.quote ?? "",
+    speakerName: body.speakerName ?? "",
+    speakerTitle: body.speakerTitle ?? "",
+    contextLine: body.contextLine ?? "",
+    brand: normalizeQuoteCardBrandValue(body.brand),
+    headshotFilename,
+  };
+  const options = forceNumericQuoteCardBrandOption(
+    buildQuoteBoxOptions(fields, previewConfig.tuning).map(toPreviewOption),
+  );
 
   const previewPayload = {
     apiKey,
@@ -144,6 +130,13 @@ export async function POST(request: Request) {
   };
 
   try {
+    logOutgoingModeckOptions({
+      route: "preview",
+      outputId: body.outputId ?? `${size.width}x${size.height}`,
+      mogrtName,
+      options,
+    });
+
     const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/preview`, {
       method: "POST",
       headers: {
@@ -194,6 +187,52 @@ export async function POST(request: Request) {
   }
 }
 
+function logOutgoingModeckOptions({
+  route,
+  outputId,
+  mogrtName,
+  options,
+}: {
+  route: "preview" | "render";
+  outputId: string;
+  mogrtName: string;
+  options: Array<{ name: string; value: string | number }>;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  const brand = options.find((option) => option.name === "BRAND")?.value;
+
+  console.info("[modeck-outgoing-options]", {
+    route,
+    outputId,
+    mogrtName,
+    brandValue: brand,
+    brandType: typeof brand,
+    optionKeys: options.map((option) => option.name),
+  });
+}
+
+function toPreviewOption(option: ModeckQuoteBoxOption): ModeckPreviewOption {
+  return {
+    ...option,
+    type: getPreviewOptionType(option.name),
+  };
+}
+
+function getPreviewOptionType(name: string): ModeckPreviewOption["type"] {
+  if (name === "QUOTE_TEXT") {
+    return "multiline_text";
+  }
+
+  if (name === "HEADSHOT") {
+    return "media_replacement";
+  }
+
+  return "text";
+}
+
 function parseSize(value: string) {
   const match = value.match(/^(\d+)x(\d+)$/);
 
@@ -210,12 +249,6 @@ function parseSize(value: string) {
     height,
     ratio,
   };
-}
-
-function normalizeBrand(value: string | undefined) {
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) ? parsed : 2;
 }
 
 function getRatioLabel(width: number, height: number) {

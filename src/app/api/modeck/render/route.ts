@@ -1,5 +1,6 @@
 import {
   buildQuoteBoxOptions,
+  forceNumericQuoteCardBrandOption,
   getModeckApiConfig,
   isRecord,
   MODECK_QUOTE_BOX_TEST_DECK,
@@ -9,6 +10,39 @@ import {
 } from "@/lib/modeck/quote-box-test";
 
 export const dynamic = "force-dynamic";
+
+type LiveRenderOutputConfig = {
+  size: string;
+  deck: string;
+  mogrt: string;
+  renderLabel: string;
+  filenameSize: string;
+  tuning?: Parameters<typeof buildQuoteBoxOptions>[1];
+};
+
+const liveRenderOutputs: Record<string, LiveRenderOutputConfig> = {
+  "still-1920x1080": {
+    size: "1920x1080",
+    deck: MODECK_QUOTE_BOX_TEST_DECK,
+    mogrt: MODECK_QUOTE_BOX_TEST_MOGRT,
+    renderLabel: "Still 1920x1080",
+    filenameSize: "1920x1080",
+  },
+  "still-1080x1920": {
+    size: "1080x1920",
+    deck: MODECK_QUOTE_BOX_TEST_DECK,
+    mogrt: "MD_Quote_Card_9x16",
+    renderLabel: "Still 1080x1920",
+    filenameSize: "1080x1920",
+    tuning: {
+      quoteFontSize: 100,
+      quoteLineSpacing: -40,
+      quotePositionX: 120,
+      quotePositionXName: "QUOTE_POSITION_x" as const,
+      quotePositionY: 325,
+    },
+  },
+};
 
 interface ModeckRenderRequestBody {
   outputId: string;
@@ -35,12 +69,14 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as Partial<ModeckRenderRequestBody>;
+  const outputId = body.outputId ?? "";
+  const outputConfig = liveRenderOutputs[outputId as keyof typeof liveRenderOutputs];
 
-  if (body.outputId !== "still-1920x1080") {
+  if (!outputConfig) {
     return Response.json(
       {
         ok: false,
-        error: "Live MoDeck final rendering is currently enabled only for the 1920x1080 still output.",
+        error: "Live MoDeck final rendering is currently enabled only for connected still outputs.",
       },
       { status: 400 },
     );
@@ -54,20 +90,30 @@ export async function POST(request: Request) {
     brand: body.brand ?? "2",
     headshotFilename: body.headshotFilename ?? "",
   };
-  const renderName = `${fields.speakerName || "Quote Card"} Package Still 1920x1080`;
+  const renderOptions = forceNumericQuoteCardBrandOption(
+    buildQuoteBoxOptions(fields, outputConfig.tuning),
+  );
+  const renderName = `${fields.speakerName || "Quote Card"} Package ${outputConfig.renderLabel}`;
   const renderPayload = {
     apiKey: config.apiKey,
-    deck: MODECK_QUOTE_BOX_TEST_DECK,
+    deck: outputConfig.deck,
     name: renderName,
     mogrtSeq: [
       {
-        name: MODECK_QUOTE_BOX_TEST_MOGRT,
-        options: buildQuoteBoxOptions(fields),
+        name: outputConfig.mogrt,
+        options: renderOptions,
         duration: 1,
       },
     ],
     globalOptions: [],
   };
+
+  logOutgoingModeckOptions({
+    route: "render",
+    outputId,
+    mogrtName: outputConfig.mogrt,
+    options: renderOptions,
+  });
 
   const response = await fetch(`${config.apiBaseUrl}/render`, {
     method: "POST",
@@ -95,12 +141,39 @@ export async function POST(request: Request) {
 
   return Response.json({
     ok: true,
-    outputId: "still-1920x1080",
+    outputId,
     editId,
     status: normalizeStatus(responseJson?.status),
     source: "modeck-render",
-    filename: `${slugify(fields.speakerName || "quote-card")}-1920x1080`,
+    filename: `${slugify(fields.speakerName || "quote-card")}-${outputConfig.filenameSize}`,
     responseSummary: summarizeResponse(responseJson ?? responseText),
+  });
+}
+
+function logOutgoingModeckOptions({
+  route,
+  outputId,
+  mogrtName,
+  options,
+}: {
+  route: "preview" | "render";
+  outputId: string;
+  mogrtName: string;
+  options: Array<{ name: string; value: string | number }>;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  const brand = options.find((option) => option.name === "BRAND")?.value;
+
+  console.info("[modeck-outgoing-options]", {
+    route,
+    outputId,
+    mogrtName,
+    brandValue: brand,
+    brandType: typeof brand,
+    optionKeys: options.map((option) => option.name),
   });
 }
 

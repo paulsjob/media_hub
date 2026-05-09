@@ -53,11 +53,16 @@ export async function GET(request: Request) {
   }
 
   const normalized = normalizeRenderStatus(responseJson, editId, outputId);
+  const debug =
+    process.env.NODE_ENV !== "production" && responseJson
+      ? buildDebugResponse(responseJson, editId)
+      : null;
 
   return Response.json({
     ok: true,
     ...normalized,
     responseSummary: summarizeResponse(responseJson ?? responseText),
+    ...(debug ? { debug } : {}),
   });
 }
 
@@ -71,7 +76,7 @@ function normalizeRenderStatus(
   outputId: string,
 ) {
   const render = findRenderRecord(response, editId) ?? response;
-  const status = normalizeStatus(render?.code ?? render?.status ?? response?.status);
+  const status = normalizeRenderRecordStatus(render, response);
   const progress = normalizeProgress(render?.progress ?? response?.progress, status);
   const sourceDownloadUrl = extractDownloadUrl(render) ?? extractDownloadUrl(response);
   const downloadUrl =
@@ -87,6 +92,65 @@ function normalizeRenderStatus(
     progress,
     temporaryDownloadUrl: downloadUrl,
     errorMessage,
+    statusDebug: buildStatusDebug(render, response),
+  };
+}
+
+function normalizeRenderRecordStatus(
+  render: Record<string, unknown> | null,
+  response: Record<string, unknown> | null,
+) {
+  const status = normalizeStatus(render?.code ?? render?.status ?? response?.status);
+
+  if (status === "queued" && render?.currentlyRendering === true) {
+    return "rendering";
+  }
+
+  return status;
+}
+
+function buildStatusDebug(
+  render: Record<string, unknown> | null,
+  response: Record<string, unknown> | null,
+) {
+  return {
+    renderStatusCode: render?.code,
+    renderStatusStatus: render?.status,
+    renderStatusDetails: render?.details,
+    renderStatusCurrentlyRendering: render?.currentlyRendering,
+    responseStatus: response?.status,
+  };
+}
+
+function buildDebugResponse(response: Record<string, unknown>, editId: string) {
+  const renderStatus = getRenderStatusRecord(response);
+  const render = findRenderRecord(response, editId);
+
+  return redactDebugValue({
+    responseKeys: Object.keys(response),
+    renderStatus,
+    selectedRenderRecord: render,
+    normalizationFields: getNormalizationFields(response, render),
+    downloadUrlCandidates: collectAllDownloadUrlCandidates(response, renderStatus, render),
+  });
+}
+
+function getNormalizationFields(
+  response: Record<string, unknown>,
+  render: Record<string, unknown> | null,
+) {
+  return {
+    status: {
+      renderCode: render?.code,
+      renderStatus: render?.status,
+      responseStatus: response.status,
+      selectedRawValue: render?.code ?? render?.status ?? response.status,
+    },
+    progress: {
+      renderProgress: render?.progress,
+      responseProgress: response.progress,
+      selectedRawValue: render?.progress ?? response.progress,
+    },
   };
 }
 
@@ -134,7 +198,7 @@ function findRenderRecord(response: Record<string, unknown> | null, editId: stri
 }
 
 function normalizeStatus(value: unknown) {
-  const status = typeof value === "string" ? value.toLowerCase() : "";
+  const status = typeof value === "string" ? value.toLowerCase().trim() : "";
 
   if (
     ["completed", "complete", "done", "success", "succeeded", "ready", "render is ready"].includes(status)
@@ -142,11 +206,17 @@ function normalizeStatus(value: unknown) {
     return "completed";
   }
 
+  if (["renrq", "queued", "request received by pc"].includes(status)) {
+    return "queued";
+  }
+
   if (["failed", "error", "canceled", "cancelled"].includes(status)) {
     return status === "canceled" || status === "cancelled" ? "canceled" : "failed";
   }
 
-  if (["rendering", "processing", "running", "in_progress", "rendering queued"].includes(status)) {
+  if (
+    ["rendering", "rendering...", "processing", "running", "in_progress", "rendering queued"].includes(status)
+  ) {
     return "rendering";
   }
 
@@ -166,26 +236,72 @@ function extractDownloadUrl(record: Record<string, unknown> | null | undefined) 
     return null;
   }
 
-  const files = Array.isArray(record.files) ? record.files : [];
-  const renders = Array.isArray(record.renders) ? record.renders : [];
-  const videoUrls = Array.isArray(record.videoUrls) ? record.videoUrls : [];
-  const candidates = [
-    record.temporaryDownloadUrl,
-    record.downloadUrl,
-    record.url,
-    record.link,
-    ...files.flatMap((file) =>
-      isRecord(file) ? [file.temporaryDownloadUrl, file.downloadUrl, file.url, file.link] : [],
-    ),
-    ...renders.flatMap((render) =>
-      isRecord(render) ? [render.temporaryDownloadUrl, render.downloadUrl, render.url, render.link] : [],
-    ),
-    ...videoUrls.flatMap((video) =>
-      isRecord(video) ? [video.temporaryDownloadUrl, video.downloadUrl, video.url, video.link] : [],
-    ),
-  ];
+  const candidates = collectDownloadUrlCandidates(record, "record").map((candidate) => candidate.value);
 
   return candidates.find((candidate): candidate is string => typeof candidate === "string") ?? null;
+}
+
+function collectDownloadUrlCandidates(record: Record<string, unknown> | null | undefined, path: string) {
+  if (!record) {
+    return [];
+  }
+
+  const candidates = [
+    ...collectDirectDownloadUrlCandidates(record, path),
+    ...collectDownloadUrlCandidatesFromArray(record.files, `${path}.files`),
+    ...collectDownloadUrlCandidatesFromArray(record.renders, `${path}.renders`),
+    ...collectDownloadUrlCandidatesFromArray(record.videoUrls, `${path}.videoUrls`),
+  ];
+
+  return candidates.filter((candidate) => typeof candidate.value === "string");
+}
+
+function collectAllDownloadUrlCandidates(
+  response: Record<string, unknown>,
+  renderStatus: Record<string, unknown> | null,
+  render: Record<string, unknown> | null,
+) {
+  const candidates = [
+    ...collectDownloadUrlCandidates(response, "response"),
+    ...collectDownloadUrlCandidates(renderStatus, "response.renderStatus"),
+    ...collectDownloadUrlCandidates(render, "selectedRenderRecord"),
+  ];
+  const seen = new Set<string>();
+
+  return candidates.filter((candidate) => {
+    const key = `${candidate.path}:${candidate.value}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function hasDownloadUrl(record: Record<string, unknown> | null | undefined) {
+  return Boolean(extractDownloadUrl(record));
+}
+
+function collectDirectDownloadUrlCandidates(record: Record<string, unknown>, path: string) {
+  const fields = ["temporaryDownloadUrl", "downloadUrl", "url", "link"] as const;
+
+  return fields.map((field) => ({
+    path: `${path}.${field}`,
+    field,
+    value: record[field],
+  }));
+}
+
+function collectDownloadUrlCandidatesFromArray(value: unknown, path: string) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item, index) =>
+    isRecord(item) ? collectDirectDownloadUrlCandidates(item, `${path}[${index}]`) : [],
+  );
 }
 
 function extractErrorMessage(record: Record<string, unknown> | null | undefined) {
@@ -207,6 +323,8 @@ function summarizeResponse(response: Record<string, unknown> | string | null) {
     return response.slice(0, 1000);
   }
 
+  const renderStatus = getRenderStatusRecord(response);
+
   return {
     keys: Object.keys(response),
     status: response.status,
@@ -214,6 +332,51 @@ function summarizeResponse(response: Record<string, unknown> | string | null) {
     info: response.info,
     message: response.message,
     error: response.error,
-    hasDownload: Boolean(extractDownloadUrl(response) ?? extractDownloadUrl(getRenderStatusRecord(response))),
+    renderStatus: renderStatus
+      ? {
+          keys: Object.keys(renderStatus),
+          status: renderStatus.status,
+          code: renderStatus.code,
+          progress: renderStatus.progress,
+          message: renderStatus.message,
+          error: renderStatus.error,
+          info: renderStatus.info,
+          details: renderStatus.details,
+          currentlyRendering: renderStatus.currentlyRendering,
+          hasDownload: hasDownloadUrl(renderStatus),
+        }
+      : null,
+    renderStatusKeys: renderStatus ? Object.keys(renderStatus) : null,
+    renderStatusStatus: renderStatus?.status,
+    renderStatusCode: renderStatus?.code,
+    renderStatusProgress: renderStatus?.progress,
+    renderStatusMessage: renderStatus?.message,
+    renderStatusError: renderStatus?.error,
+    renderStatusInfo: renderStatus?.info,
+    renderStatusDetails: renderStatus?.details,
+    renderStatusCurrentlyRendering: renderStatus?.currentlyRendering,
+    renderStatusHasDownload: hasDownloadUrl(renderStatus),
+    hasDownload: hasDownloadUrl(response) || hasDownloadUrl(renderStatus),
   };
+}
+
+function redactDebugValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactDebugValue);
+  }
+
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      isSecretKey(key) ? "[redacted]" : redactDebugValue(entry),
+    ]),
+  );
+}
+
+function isSecretKey(key: string) {
+  return /api[-_]?key|authorization|secret|password|bearer|access[-_]?token|refresh[-_]?token/i.test(key);
 }

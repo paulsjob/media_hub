@@ -8,7 +8,7 @@
 | `/create` | Alias for the home create-package page. | Product-facing MVP | Operators | Re-exports `HomePage` from `/`; keep route stable unless a real create flow replaces it. |
 | `/intake` | Mock story intake form showing story basics, sources, receipts, messaging, and recommended formats. | Product-facing MVP | Operators, editorial | Uses `AppShell`, `PageHeader`, `SectionCard`, form UI primitives, and `mediaLab.getFeaturedStory()`. |
 | `/templates` | Template library and template detail view. | Product-facing MVP | Operators | Uses `AppShell`, `TemplateListItem`, `SectionCard`, and template mock data. Search/filter controls are presentational. |
-| `/generate` | Quote Card generation workflow: edit fields, select outputs, preview selected ratios, and start package generation. | Product-facing MVP | Operators | Uses `MvpShell` and `PackageGenerator`. Connects to live MoDeck preview for supported 16:9 preview behavior and starts live final render only for `still-1920x1080`. |
+| `/generate` | Quote Card generation workflow: edit fields, select outputs, preview selected ratios, and start package generation. | Product-facing MVP | Operators | Uses `MvpShell` and `PackageGenerator`. Connects to live MoDeck preview for supported 16:9 preview behavior and starts live final render for connected still outputs. |
 | `/package` | Package results screen showing still/video download rows from selected outputs and render query state. | Product-facing MVP | Operators | Uses `MvpShell` and `PackageResults`. Polls MoDeck render status for live render outputs. |
 | `/approvals` | Approval queue mock with one featured package and review detail. | Product-facing MVP | Approvers, operators | Uses `AppShell`, `AssetPreview`, `StatusBadge`, and `mediaLab.getFeaturedAssetPackageView()`. |
 | `/distribution` | Distribution planning stub for selected platforms and scheduled export. | Placeholder | Operators, distribution | Uses `AppShell`, `AssetPreview`, platform mock data, and links back to library asset detail. No publishing integration. |
@@ -33,7 +33,7 @@
 
 `/api/modeck/preview/download` is a convenience download route for preview-backed stills. It calls MoDeck `/preview`, extracts the image, converts it to PNG with `sharp`, and returns it as an attachment.
 
-`/api/modeck/render` starts a live final render, currently limited to `still-1920x1080`. It maps Quote Card fields to MoDeck options, calls MoDeck `/render`, and returns the edit ID and initial normalized status.
+`/api/modeck/render` starts a live final render for connected still outputs, currently `still-1920x1080` and `still-1080x1920`. It maps Quote Card fields to MoDeck options, calls MoDeck `/render`, and returns the edit ID and initial normalized status.
 
 `/api/modeck/render/status` polls MoDeck `/renderstatus` for an edit ID. It normalizes statuses into queued, rendering, completed, failed, or canceled; derives progress; and registers an internal download URL when MoDeck exposes a temporary media URL.
 

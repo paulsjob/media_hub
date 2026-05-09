@@ -1,4 +1,5 @@
 import { MVP_OUTPUT_FORMATS } from "@/lib/output-formats";
+import { normalizeQuoteCardBrandValue } from "@/lib/modeck/quote-box-test";
 
 import type {
   MediaLabModeckPayload,
@@ -11,7 +12,7 @@ import type {
 
 export const QUOTE_CARD_MODECK_MAPPING: ModeckTemplateMapping = {
   templateId: "template-quote-card-v2",
-  deckName: "Quote Card",
+  deckName: "MD_Quote_Card_Package",
   fieldMappings: [
     {
       mediaLabFieldId: "quote",
@@ -51,10 +52,10 @@ export const QUOTE_CARD_MODECK_MAPPING: ModeckTemplateMapping = {
     },
   ],
   mogrtMappings: [
-    { ratio: "16:9", mogrtName: "QuoteCard_16x9" },
+    { ratio: "16:9", mogrtName: "MD_Quote_Card_16x9" },
     { ratio: "1:1", mogrtName: "QuoteCard_1x1" },
     { ratio: "4:5", mogrtName: "QuoteCard_4x5" },
-    { ratio: "9:16", mogrtName: "QuoteCard_9x16" },
+    { ratio: "9:16", mogrtName: "MD_Quote_Card_9x16" },
   ],
   outputFormatIds: MVP_OUTPUT_FORMATS.map((output) => output.id),
 };
@@ -148,7 +149,10 @@ function mapFieldOptions(mapping: ModeckTemplateMapping, payload: MediaLabModeck
     .map((field) => ({
       name: field.modeckOptionName,
       type: field.optionType,
-      value: payload.fields[field.mediaLabFieldId] ?? "",
+      value:
+        field.modeckOptionName === "BRAND"
+          ? normalizeQuoteCardBrandValue(payload.fields[field.mediaLabFieldId])
+          : (payload.fields[field.mediaLabFieldId] ?? ""),
     }));
 }
 

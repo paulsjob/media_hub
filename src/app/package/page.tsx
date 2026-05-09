@@ -39,10 +39,13 @@ export default async function PackagePage({
           initialRenderResults={renderResults}
           packageName={packageFilename}
           packageContext={{
+            template: params.template,
             quote: params.quote,
             speakerName: params.speakerName,
             speakerTitle: params.speakerTitle,
             contextLine: params.contextLine,
+            headshotFilename: params.headshotFilename,
+            brand: params.brand,
             previewApproved: params.previewApproved === "1",
             generatedAt,
           }}

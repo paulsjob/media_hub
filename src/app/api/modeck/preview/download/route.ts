@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import {
   buildQuoteBoxOptions,
+  forceNumericQuoteCardBrandOption,
   getModeckApiConfig,
   isRecord,
   MODECK_QUOTE_BOX_TEST_DECK,
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
     brand: url.searchParams.get("brand") ?? "2",
     headshotFilename: url.searchParams.get("headshotFilename") ?? "",
   };
+  const options = buildOptions(fields);
 
   const previewPayload = {
     apiKey: config.apiKey,
@@ -40,9 +42,16 @@ export async function GET(request: Request) {
     frame: 0,
     mogrt: {
       name: MODECK_QUOTE_BOX_TEST_MOGRT,
-      options: buildOptions(fields),
+      options,
     },
   };
+
+  logOutgoingModeckOptions({
+    route: "preview",
+    outputId: size,
+    mogrtName: MODECK_QUOTE_BOX_TEST_MOGRT,
+    options,
+  });
 
   const response = await fetch(`${config.apiBaseUrl}/preview`, {
     method: "POST",
@@ -86,7 +95,34 @@ function buildOptions(fields: {
   brand: string;
   headshotFilename: string;
 }): ModeckQuoteBoxOption[] {
-  return buildQuoteBoxOptions(fields);
+  return forceNumericQuoteCardBrandOption(buildQuoteBoxOptions(fields));
+}
+
+function logOutgoingModeckOptions({
+  route,
+  outputId,
+  mogrtName,
+  options,
+}: {
+  route: "preview" | "render";
+  outputId: string;
+  mogrtName: string;
+  options: Array<{ name: string; value: string | number }>;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  const brand = options.find((option) => option.name === "BRAND")?.value;
+
+  console.info("[modeck-outgoing-options]", {
+    route,
+    outputId,
+    mogrtName,
+    brandValue: brand,
+    brandType: typeof brand,
+    optionKeys: options.map((option) => option.name),
+  });
 }
 
 function extractPreviewImage(response: Record<string, unknown> | null) {

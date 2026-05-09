@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { PreviewGrid } from "@/components/preview-grid";
@@ -32,6 +32,8 @@ interface RenderStartResult {
   error?: string;
 }
 
+const liveRenderOutputIds = new Set(["still-1920x1080", "still-1080x1920"]);
+
 export function PackageGenerator({
   template,
   fields,
@@ -60,7 +62,11 @@ export function PackageGenerator({
     headshot: initialContent?.headshot ?? getFieldValue(fields, "Headshot"),
     brand: initialContent?.brand ?? "2",
   }));
-  const [outputsOpen, setOutputsOpen] = useState(false);
+  const [approvedPreviewSignature, setApprovedPreviewSignature] = useState("");
+  const [previewReadiness, setPreviewReadiness] = useState({
+    currentPreviewSignature: "",
+    allConnectedPreviewsReady: false,
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedHeadshot, setSelectedHeadshot] = useState<{
     filename: string;
@@ -75,6 +81,11 @@ export function PackageGenerator({
     }),
     [content, selectedHeadshot],
   );
+  const previewApprovedEffective =
+    Boolean(approvedPreviewSignature) &&
+    approvedPreviewSignature === previewReadiness.currentPreviewSignature &&
+    previewReadiness.allConnectedPreviewsReady;
+  const previousPreviewSignatureRef = useRef(previewReadiness.currentPreviewSignature);
 
   useEffect(() => {
     return () => {
@@ -84,7 +95,62 @@ export function PackageGenerator({
     };
   }, [selectedHeadshot]);
 
+  useEffect(() => {
+    const previousSignature = previousPreviewSignatureRef.current;
+
+    if (previousSignature && previousSignature !== previewReadiness.currentPreviewSignature) {
+      if (process.env.NODE_ENV !== "production") {
+        console.info("[modeck-preview-approval]", {
+          currentPreviewSignature: previewReadiness.currentPreviewSignature,
+          approvedPreviewSignature,
+          previewApprovedEffective: false,
+          reason: "preview_signature_changed",
+        });
+      }
+    }
+
+    previousPreviewSignatureRef.current = previewReadiness.currentPreviewSignature;
+  }, [approvedPreviewSignature, previewReadiness.currentPreviewSignature]);
+
+  useEffect(() => {
+    if (
+      approvedPreviewSignature &&
+      approvedPreviewSignature === previewReadiness.currentPreviewSignature &&
+      !previewReadiness.allConnectedPreviewsReady
+    ) {
+      if (process.env.NODE_ENV !== "production") {
+        console.info("[modeck-preview-approval]", {
+          currentPreviewSignature: previewReadiness.currentPreviewSignature,
+          approvedPreviewSignature,
+          previewApprovedEffective: false,
+          reason: "connected_previews_not_ready",
+        });
+      }
+    }
+  }, [approvedPreviewSignature, previewReadiness]);
+
+  const handlePreviewStateChange = useCallback(
+    (state: { currentPreviewSignature: string; allConnectedPreviewsReady: boolean }) => {
+      setPreviewReadiness(state);
+    },
+    [],
+  );
+
+  function invalidatePreviewApproval(reason: string) {
+    if (approvedPreviewSignature && process.env.NODE_ENV !== "production") {
+      console.info("[modeck-preview-approval]", {
+        currentPreviewSignature: previewReadiness.currentPreviewSignature,
+        approvedPreviewSignature,
+        previewApprovedEffective: false,
+        reason,
+      });
+    }
+
+    setApprovedPreviewSignature("");
+  }
+
   function toggleOutput(id: string) {
+    invalidatePreviewApproval("selected_outputs_changed");
     setSelectedIds((current) => {
       if (!current.includes(id)) {
         setActiveOutputId(id);
@@ -108,10 +174,12 @@ export function PackageGenerator({
   }
 
   function updateContent(key: keyof PreviewContent, value: string) {
+    invalidatePreviewApproval(`${key}_changed`);
     setContent((current) => ({ ...current, [key]: value }));
   }
 
   function selectHeadshotFile(file: File | null) {
+    invalidatePreviewApproval("headshot_file_changed");
     setHeadshotError("");
 
     setSelectedHeadshot((current) => {
@@ -141,7 +209,7 @@ export function PackageGenerator({
   }
 
   async function generatePackage() {
-    if (selectedIds.length === 0 || isGenerating) {
+    if (selectedIds.length === 0 || isGenerating || !previewApprovedEffective) {
       return;
     }
 
@@ -168,13 +236,21 @@ export function PackageGenerator({
     const renderResults = await Promise.all(
       renderRequests.map((request) => mockModeckAdapter.requestRender(request)),
     );
-    const liveRenderResult = selectedIds.includes("still-1920x1080")
-      ? await startLiveModeckRender(content)
-      : null;
+    const liveRenderResults = await Promise.all(
+      selectedIds
+        .filter((outputId) => liveRenderOutputIds.has(outputId))
+        .map((outputId) => startLiveModeckRender(outputId, content)),
+    );
+    const liveRenderByOutputId = new Map(
+      liveRenderResults
+        .filter((result) => result.outputId)
+        .map((result) => [result.outputId as string, result]),
+    );
     const renderedOutputs = renderResults.map((result) => {
       const livePreviewDownloadUrl = getLivePreviewDownloadUrl(result.outputId, outputs, content);
+      const liveRenderResult = liveRenderByOutputId.get(result.outputId);
 
-      if (result.outputId === "still-1920x1080" && liveRenderResult?.ok && liveRenderResult.editId) {
+      if (liveRenderResult?.ok && liveRenderResult.editId) {
         return {
           outputId: result.outputId,
           editId: liveRenderResult.editId,
@@ -190,7 +266,7 @@ export function PackageGenerator({
         temporaryDownloadUrl: livePreviewDownloadUrl ?? result.files[0]?.temporaryDownloadUrl ?? "",
         source: livePreviewDownloadUrl ? "modeck-preview" : "mock-placeholder",
         errorMessage:
-          result.outputId === "still-1920x1080" && liveRenderResult && !liveRenderResult.ok
+          liveRenderResult && !liveRenderResult.ok
             ? liveRenderResult.error
             : undefined,
       };
@@ -204,7 +280,7 @@ export function PackageGenerator({
       headshotFilename: headshotReference,
       brand: content.brand ?? "2",
       outputs: selectedIds.join(","),
-      previewApproved: outputsOpen ? "1" : "0",
+      previewApproved: previewApprovedEffective ? "1" : "0",
       renders: encodeURIComponent(JSON.stringify(renderedOutputs)),
     });
 
@@ -267,6 +343,8 @@ export function PackageGenerator({
               activeOutputId={activeOutputId}
               content={previewContent}
               onActiveOutputChange={setActiveOutputId}
+              onPreviewStateChange={handlePreviewStateChange}
+              templateId="quote-card"
             />
           </SectionCard>
 
@@ -275,12 +353,22 @@ export function PackageGenerator({
               <div>
                 <p className="font-semibold text-[var(--navy-blue)]">Approve this preview to package the bundle.</p>
               </div>
-              {outputsOpen ? (
+              {!previewReadiness.allConnectedPreviewsReady ? (
+                <span className="inline-flex min-h-10 items-center justify-center border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-500">
+                  Rendering previews
+                </span>
+              ) : previewApprovedEffective ? (
                 <span className="inline-flex min-h-10 items-center justify-center border border-[var(--navy-blue)] bg-white px-4">
                   <StatusPill label="Preview approved" />
                 </span>
               ) : (
-                <ButtonLike variant="primary" onClick={() => setOutputsOpen(true)} className="shrink-0 gap-2">
+                <ButtonLike
+                  variant="primary"
+                  onClick={() => {
+                    setApprovedPreviewSignature(previewReadiness.currentPreviewSignature);
+                  }}
+                  className="shrink-0 gap-2"
+                >
                   <Icon name="check" />
                   Approve Preview
                 </ButtonLike>
@@ -290,16 +378,22 @@ export function PackageGenerator({
         </div>
       </div>
 
-      {outputsOpen ? (
+      {previewApprovedEffective ? (
         <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
-          <ButtonLike variant="secondary" onClick={() => setOutputsOpen(false)} className="gap-2">
+          <ButtonLike
+            variant="secondary"
+            onClick={() => {
+              setApprovedPreviewSignature("");
+            }}
+            className="gap-2"
+          >
             <Icon name="sliders" />
             Edit Fields
           </ButtonLike>
           <ButtonLike
             variant="primary"
             onClick={generatePackage}
-            disabled={selectedIds.length === 0 || isGenerating}
+            disabled={selectedIds.length === 0 || isGenerating || !previewApprovedEffective}
             className="gap-2"
           >
             <Icon name="package" />
@@ -311,14 +405,14 @@ export function PackageGenerator({
   );
 }
 
-async function startLiveModeckRender(content: PreviewContent): Promise<RenderStartResult> {
+async function startLiveModeckRender(outputId: string, content: PreviewContent): Promise<RenderStartResult> {
   try {
     const response = await fetch("/api/modeck/render", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        outputId: "still-1920x1080",
-        size: "1920x1080",
+        outputId,
+        size: outputId.replace("still-", ""),
         quote: content.quote,
         speakerName: content.speakerName,
         speakerTitle: content.speakerTitle,
@@ -329,10 +423,13 @@ async function startLiveModeckRender(content: PreviewContent): Promise<RenderSta
     });
     const data = (await response.json()) as RenderStartResult;
 
-    return response.ok ? data : { ...data, ok: false };
+    return response.ok
+      ? { ...data, outputId: data.outputId ?? outputId }
+      : { ...data, ok: false, outputId: data.outputId ?? outputId };
   } catch (error) {
     return {
       ok: false,
+      outputId,
       error: error instanceof Error ? error.message : "Render request failed.",
     };
   }

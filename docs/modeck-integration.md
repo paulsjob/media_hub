@@ -68,14 +68,16 @@ The first mapping is Quote Card:
 
 For the MVP, Headshot is a URL-or-filename field. If the value is blank, MEDIA LAB omits `HEADSHOT` and MoDeck uses the default MOGRT media. If the value is a public URL, MEDIA LAB passes it to MoDeck as-is so MoDeck can download it. If the value is a filename or subfolder path, MEDIA LAB passes it to MoDeck as-is; MoDeck resolves it from `MoDeck Sync/_modk-data/User media` and configured additional media folders. Browser file upload is not part of the MVP render path. The optional browser local image picker is only for visual confirmation and crop checking.
 
-Ratio-specific MOGRT names:
+Top-level MoDeck template/package name: `MD_Quote_Card_Package`.
+
+Ratio-specific child MOGRT names:
 
 | Ratio | MOGRT |
 | --- | --- |
-| `16:9` | `QuoteCard_16x9` |
+| `16:9` | `MD_Quote_Card_16x9` |
 | `1:1` | `QuoteCard_1x1` |
 | `4:5` | `QuoteCard_4x5` |
-| `9:16` | `QuoteCard_9x16` |
+| `9:16` | `MD_Quote_Card_9x16` |
 
 ## E. How Ratios Are Handled
 

@@ -33,7 +33,7 @@ export interface ModeckOption {
 export interface ModeckOptionValue {
   name: string;
   type: ModeckOptionType;
-  value: string;
+  value: string | number;
 }
 
 export interface ModeckMediaReference {
