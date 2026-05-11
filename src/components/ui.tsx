@@ -10,7 +10,7 @@ const focusState =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--flame)]";
 
 const buttonBase =
-  `inline-flex min-h-10 items-center justify-center border px-4 text-sm font-bold uppercase tracking-wide transition ${focusState}`;
+  `inline-flex min-h-10 items-center justify-center rounded-md border px-4 text-sm font-bold transition ${focusState}`;
 
 const chipBase =
   `chip transition ${focusState}`;
@@ -29,10 +29,10 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 border-b border-[var(--navy-blue)] pb-5 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <div className="mb-8 flex flex-col gap-4 border-b border-[var(--silver)] pb-5 xl:flex-row xl:items-start xl:justify-between">
       <div className="max-w-4xl">
         {eyebrow ? (
-          <p className="mb-2 inline-block bg-[var(--powder-blue)] px-2 py-1 text-xs font-bold uppercase tracking-wide text-[var(--navy-blue)]">{eyebrow}</p>
+          <p className="mb-2 inline-block rounded-md bg-[var(--powder-blue)] px-2 py-1 text-xs font-bold text-[var(--navy-blue)]">{eyebrow}</p>
         ) : null}
         <h1 className="text-4xl font-extrabold tracking-tight text-[var(--navy-blue)] md:text-6xl">
           {title} {accent ? <span className="text-[var(--flame)]">{accent}</span> : null}
@@ -56,7 +56,7 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={`border border-[var(--silver)] bg-[var(--white)] p-5 ${className}`}>
+    <section className={`rounded-lg border border-[var(--silver)] bg-[var(--white)] p-5 shadow-sm ${className}`}>
       <div className="mb-4 flex items-center justify-between border-b border-[var(--silver)] pb-3">
         <h2 className="text-sm font-extrabold uppercase tracking-wide text-[var(--navy-blue)]">{title}</h2>
         {action}
@@ -260,13 +260,13 @@ export const PrimaryActionButton = PrimaryButton;
 export function MvpShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-[var(--light-gray)] px-5 py-6 text-[var(--black)]">
-      <div className="mx-auto max-w-[1024px]">
-        <header className="mb-10 flex items-center justify-between border-b border-[var(--navy-blue)] pb-5">
-          <Link href="/" className="brand-heading text-3xl font-extrabold tracking-tight text-[var(--navy-blue)]">
-            MEDIA LAB
+      <div className="mx-auto max-w-[1120px]">
+        <header className="mb-8 flex items-center justify-between border-b border-[var(--silver)] pb-5">
+          <Link href="/generate" className="brand-heading text-2xl font-extrabold tracking-tight text-[var(--navy-blue)]">
+            Media Lab Lite
           </Link>
-          <Link href="/templates" className="text-sm font-bold uppercase tracking-wide text-[var(--slate-blue)] hover:text-[var(--flame)]">
-            Approved Templates
+          <Link href="/generate" className="text-sm font-bold text-[var(--slate-blue)] hover:text-[var(--flame)]">
+            Quote Card
           </Link>
         </header>
         {children}

@@ -1,3 +1,5 @@
-import HomePage from "../page";
+import { redirect } from "next/navigation";
 
-export default HomePage;
+export default function CreatePage() {
+  redirect("/generate");
+}

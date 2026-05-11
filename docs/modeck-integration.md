@@ -1,10 +1,14 @@
 # MoDeck Integration Foundation
 
-MEDIA LAB will use MoDeck as a hidden render backend. The user experience stays the simple branded MEDIA LAB flow:
+Media Lab Lite uses MoDeck as the rendering engine for connected templated graphics.
 
-Pick Template -> Fill Required Fields -> Choose Outputs -> See WYSIWYG-style previews -> Generate Package -> Download Package
+The current active scope is fast Quote Card still generation in multiple sizes. The full Media Lab command center is deferred; MoDeck integration work should prioritize reliable preview generation, render submission, status polling, and downloads for the Lite workflow.
 
-Users should not need to understand MoDeck, MOGRTs, After Effects, render queues, edit IDs, deck names, or option names. MEDIA LAB owns that translation.
+Media Lab Lite uses MoDeck as a hidden render backend. The user experience stays the simple branded Lite flow:
+
+Pick Template -> Fill Required Fields -> Choose Sizes -> See previews -> Generate Graphics -> Download PNGs
+
+Users should not need to understand MoDeck, MOGRTs, After Effects, render queues, edit IDs, deck names, or option names. Media Lab Lite owns that translation.
 
 ## A. What MEDIA LAB Sends
 

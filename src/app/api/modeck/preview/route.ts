@@ -32,11 +32,25 @@ interface ModeckPreviewOption {
 type ModeckPreviewOutputConfig = {
   mogrt: string;
   tuning?: Parameters<typeof buildQuoteBoxOptions>[1];
+  frame?: number;
+  previewFrame?: number | null;
 };
 
 const previewOutputConfigs: Record<string, ModeckPreviewOutputConfig> = {
   "16:9": {
     mogrt: MODECK_QUOTE_BOX_TEST_MOGRT,
+  },
+  "1:1": {
+    mogrt: "MD_Quote_Card_1x1",
+    frame: 10,
+    previewFrame: null,
+    tuning: {
+      quoteFontSize: 70,
+      quoteLineSpacing: -70,
+      quotePositionX: 120,
+      quotePositionXName: "QUOTE_POSITION_X" as const,
+      quotePositionY: 225,
+    },
   },
   "9:16": {
     mogrt: "MD_Quote_Card_9x16",
@@ -84,6 +98,9 @@ export async function POST(request: Request) {
   const previewConfig = previewOutputConfigs[size.ratio] ?? previewOutputConfigs["16:9"];
   const templateName = body.deck?.trim() || MODECK_QUOTE_BOX_TEST_DECK;
   const mogrtName = body.mogrt?.trim() || previewConfig.mogrt;
+  const requestedFrame = Number(body.frame ?? 0);
+  const frame = previewConfig.frame ?? requestedFrame;
+  const previewFrame = previewConfig.previewFrame === null ? undefined : previewConfig.previewFrame ?? requestedFrame;
   const headshotFilename = body.headshotFilename?.trim() ?? "";
   const fields = {
     quote: body.quote ?? "",
@@ -101,7 +118,7 @@ export async function POST(request: Request) {
     apiKey,
     deck: templateName,
     size: "",
-    frame: Number(body.frame ?? 0),
+    frame,
     mogrt: {
       name: mogrtName,
       options: options.map(({ name, value }) => ({ name, value })),
@@ -115,7 +132,7 @@ export async function POST(request: Request) {
     ratio: size.ratio,
     width: size.width,
     height: size.height,
-    previewFrame: Number(body.frame ?? 0),
+    ...(typeof previewFrame === "number" ? { previewFrame } : {}),
     options,
     media: headshotFilename
       ? [
@@ -134,6 +151,9 @@ export async function POST(request: Request) {
       route: "preview",
       outputId: body.outputId ?? `${size.width}x${size.height}`,
       mogrtName,
+      frame: previewPayload.frame,
+      previewFrame: previewPayload.previewFrame,
+      hasPreviewFrame: Object.hasOwn(previewPayload, "previewFrame"),
       options,
     });
 
@@ -150,6 +170,14 @@ export async function POST(request: Request) {
     const responseText = await response.text();
     const responseJson = parseJson(responseText);
     const imageBase64 = extractPreviewImage(responseJson);
+    logModeckPreviewResponse({
+      outputId: body.outputId ?? `${size.width}x${size.height}`,
+      mogrtName,
+      frame: previewPayload.frame,
+      previewFrame: previewPayload.previewFrame,
+      hasPreviewFrame: Object.hasOwn(previewPayload, "previewFrame"),
+      imageBase64,
+    });
 
     if (!response.ok) {
       return Response.json(
@@ -191,11 +219,17 @@ function logOutgoingModeckOptions({
   route,
   outputId,
   mogrtName,
+  frame,
+  previewFrame,
+  hasPreviewFrame,
   options,
 }: {
   route: "preview" | "render";
   outputId: string;
   mogrtName: string;
+  frame?: number;
+  previewFrame?: number;
+  hasPreviewFrame?: boolean;
   options: Array<{ name: string; value: string | number }>;
 }) {
   if (process.env.NODE_ENV === "production") {
@@ -208,9 +242,41 @@ function logOutgoingModeckOptions({
     route,
     outputId,
     mogrtName,
+    frame,
+    previewFrame,
+    hasPreviewFrame,
     brandValue: brand,
     brandType: typeof brand,
     optionKeys: options.map((option) => option.name),
+  });
+}
+
+function logModeckPreviewResponse({
+  outputId,
+  mogrtName,
+  frame,
+  previewFrame,
+  hasPreviewFrame,
+  imageBase64,
+}: {
+  outputId: string;
+  mogrtName: string;
+  frame: number;
+  previewFrame?: number;
+  hasPreviewFrame: boolean;
+  imageBase64: string | null;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-preview-response]", {
+    outputId,
+    mogrtName,
+    frame,
+    previewFrame,
+    hasPreviewFrame,
+    imageBase64Length: imageBase64?.length ?? 0,
   });
 }
 
@@ -313,7 +379,7 @@ function summarizeRequest(payload: {
   width: number;
   height: number;
   frame: number;
-  previewFrame: number;
+  previewFrame?: number;
   options: Array<{ name: string; value: string | number }>;
   media?: Array<{ optionName: string; uploadedFilename?: string; mediaLabReference: string }>;
 }) {

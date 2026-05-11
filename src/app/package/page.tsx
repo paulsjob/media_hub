@@ -32,7 +32,7 @@ export default async function PackagePage({
 
   return (
     <MvpShell>
-      <div className="mx-auto grid max-w-4xl gap-5">
+      <div className="mx-auto grid max-w-[1120px] gap-5">
         <PackageResults
           stills={stills}
           videos={videos}

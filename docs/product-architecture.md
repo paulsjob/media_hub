@@ -1,5 +1,7 @@
 # Media Hub Product Architecture
 
+Current active product scope: Media Lab Lite. The Lite workflow is `/generate` -> `/package` for templated Quote Card graphic generation and downloads. Command-center routes documented below are deferred product concepts unless explicitly reactivated.
+
 ## Current Route Map
 
 | Route | Current purpose | Status | Audience | Notes |

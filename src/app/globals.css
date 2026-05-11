@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --navy-blue: #111f3f;
-  --slate-blue: #4f6f9f;
-  --powder-blue: #cfe8ff;
-  --flame: #f05a28;
-  --light-gray: #f4f4f1;
-  --silver: #c9c9c3;
-  --black: #000000;
+  --navy-blue: #17213b;
+  --slate-blue: #51627f;
+  --powder-blue: #cfdaf2;
+  --flame: #f37321;
+  --light-gray: #f9f9ff;
+  --silver: #d9deeb;
+  --black: #111827;
   --white: #ffffff;
+  --success: #0f7a5f;
+  --danger: #b93815;
   --background: var(--light-gray);
   --foreground: var(--black);
   --navy: var(--navy-blue);
@@ -21,14 +23,13 @@
 *::before,
 *::after {
   box-sizing: border-box;
-  border-radius: 0 !important;
 }
 
 body {
   margin: 0;
   background: var(--light-gray);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", Inter, Arial, Helvetica, sans-serif;
 }
 
 a {
@@ -48,20 +49,18 @@ h2,
 h3,
 .brand-heading {
   color: var(--navy-blue);
-  font-family: "Pathway Extreme", "Pathway Gothic One", "Arial Narrow", Arial, Helvetica, sans-serif;
-  font-weight: 800;
+  font-family: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", Inter, Arial, Helvetica, sans-serif;
+  font-weight: 750;
   letter-spacing: 0;
-  line-height: 0.95;
-  text-transform: uppercase;
+  line-height: 1.05;
 }
 
 button,
 [role="button"],
 a[class*="min-h-"],
 summary {
-  text-transform: uppercase;
   font-weight: 700;
-  letter-spacing: 0.035em;
+  letter-spacing: 0;
 }
 
 input,
@@ -78,14 +77,15 @@ textarea:focus,
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 2px solid var(--flame) !important;
+  outline: 3px solid color-mix(in srgb, var(--flame) 28%, white) !important;
   outline-offset: 2px;
 }
 
 .shadow-sm,
+.shadow-md,
 .shadow-lg,
 .shadow-2xl {
-  box-shadow: none !important;
+  box-shadow: 0 10px 30px rgb(17 24 39 / 0.06) !important;
 }
 
 .chip {
@@ -99,8 +99,7 @@ summary:focus-visible {
   color: var(--navy-blue);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .bg-slate-50,
@@ -120,12 +119,20 @@ summary:focus-visible {
 
 .bg-blue-600,
 .bg-blue-700,
-.bg-emerald-500,
 .bg-emerald-600,
-.bg-emerald-100,
 .bg-\[\#06153a\],
 .bg-\[\#12306a\] {
   background-color: var(--navy-blue) !important;
+}
+
+.bg-emerald-50,
+.bg-emerald-100 {
+  background-color: #eaf7f3 !important;
+}
+
+.bg-emerald-500,
+.bg-emerald-600 {
+  background-color: var(--success) !important;
 }
 
 .bg-\[\#e64a19\],
@@ -147,7 +154,7 @@ summary:focus-visible {
 .text-orange-700,
 .text-orange-800,
 .text-red-700 {
-  color: var(--flame) !important;
+  color: var(--danger) !important;
 }
 
 .text-slate-400,

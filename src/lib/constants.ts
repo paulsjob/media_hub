@@ -29,22 +29,11 @@ export interface StatusDefinition {
 }
 
 export const NAV_ITEMS: NavigationItem[] = [
-  { href: "/", label: "Dashboard", icon: "DB" },
-  { href: "/intake", label: "Intake", icon: "IN" },
-  { href: "/templates", label: "Templates", icon: "TP" },
   { href: "/generate", label: "Generate", icon: "GN" },
-  { href: "/approvals", label: "Approvals", icon: "AP", count: 12 },
-  { href: "/library", label: "Library", icon: "LB" },
-  { href: "/performance", label: "Performance", icon: "PF" },
-  { href: "/distribution", label: "Distribution", icon: "DS" },
-  { href: "/settings", label: "Settings", icon: "ST" },
 ];
 
 export const TOP_NAV_ITEMS = [
-  { href: "/templates", label: "Templates" },
-  { href: "/library", label: "Series" },
-  { href: "/settings", label: "Guidelines" },
-  { href: "/settings", label: "Team" },
+  { href: "/generate", label: "Generate" },
 ];
 
 export const OUTPUT_FORMATS: OutputFormatDefinition[] = [
@@ -90,10 +79,7 @@ export const DISTRIBUTION_PLATFORMS: PlatformDefinition[] = [
 ];
 
 export const QUICK_ACTIONS = [
-  { label: "Create Story Record", href: "/intake" },
-  { label: "Generate Package", href: "/generate" },
-  { label: "Review Approvals", href: "/approvals" },
-  { label: "Search Library", href: "/library" },
+  { label: "Generate Graphics", href: "/generate" },
 ];
 
 export const PERFORMANCE_INSIGHTS = [

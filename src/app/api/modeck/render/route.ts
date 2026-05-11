@@ -28,6 +28,20 @@ const liveRenderOutputs: Record<string, LiveRenderOutputConfig> = {
     renderLabel: "Still 1920x1080",
     filenameSize: "1920x1080",
   },
+  "still-1080x1080": {
+    size: "1080x1080",
+    deck: MODECK_QUOTE_BOX_TEST_DECK,
+    mogrt: "MD_Quote_Card_1x1",
+    renderLabel: "Still 1080x1080",
+    filenameSize: "1080x1080",
+    tuning: {
+      quoteFontSize: 70,
+      quoteLineSpacing: -70,
+      quotePositionX: 120,
+      quotePositionXName: "QUOTE_POSITION_X" as const,
+      quotePositionY: 225,
+    },
+  },
   "still-1080x1920": {
     size: "1080x1920",
     deck: MODECK_QUOTE_BOX_TEST_DECK,

@@ -53,7 +53,7 @@ interface PreviewOption {
   ratio: PreviewRatio;
 }
 
-const connectedPreviewOutputIds = new Set(["still-1920x1080", "still-1080x1920"]);
+const connectedPreviewOutputIds = new Set(["still-1920x1080", "still-1080x1080", "still-1080x1920"]);
 const previewCache = new Map<string, ModeckPreviewSnapshot>();
 const previewInFlight = new Map<string, Promise<ModeckPreviewSnapshot>>();
 

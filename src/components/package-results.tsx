@@ -235,15 +235,6 @@ export function PackageResults({
         />
       </CollapsibleSection>
 
-      <PlatformCopyCard packageContext={packageContext} />
-
-      <ArchiveMetadataCard
-        packageContext={packageContext}
-        outputs={outputs}
-        readyFileCount={readyFileCount}
-        placeholderFileCount={placeholderFileCount}
-      />
-
       <CollapsibleSection title="Output Details">
         <div className="space-y-3">
           {outputs.map((output) => (
@@ -492,6 +483,7 @@ function VisualOutputPreviewCard({
         <OutputDownloadAction
           canDownload={canDownload}
           downloaded={downloaded}
+          downloadLabel={output.type === "still" ? "Download PNG" : "Download File"}
           unavailableLabel={getUnavailableActionLabel(state)}
           onClick={downloadFile}
           fullWidth
@@ -541,12 +533,14 @@ function PreviewFrame({
 function OutputDownloadAction({
   canDownload,
   downloaded,
+  downloadLabel,
   unavailableLabel,
   onClick,
   fullWidth = false,
 }: {
   canDownload: boolean;
   downloaded: boolean;
+  downloadLabel: string;
   unavailableLabel: string;
   onClick: () => void;
   fullWidth?: boolean;
@@ -574,7 +568,7 @@ function OutputDownloadAction({
       } ${widthClass}`}
     >
       <Icon name={downloaded ? "check" : "download"} />
-      {downloaded ? "Downloaded" : "Download"}
+      {downloaded ? "Downloaded" : downloadLabel}
     </button>
   );
 }
@@ -613,23 +607,25 @@ function PackageReviewHeader({
   );
 
   return (
-    <section className="border border-[var(--navy-blue)] bg-white p-5">
+    <section className="rounded-lg border border-[var(--silver)] bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="brand-heading text-4xl text-[var(--navy-blue)]">One Story. Many Expressions.</h1>
+            <h1 className="brand-heading text-4xl text-[var(--navy-blue)]">Generated Outputs</h1>
             <StatusPill label="Ready" />
           </div>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--black)]">Create once. Distribute everywhere.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--black)]">
+            Download the finished graphics when each selected size is ready.
+          </p>
         </div>
         <div className="flex flex-wrap gap-3 sm:justify-end">
           <SecondaryButton href={changeOutputsHref} className="gap-2">
             <Icon name="sliders" />
-            Edit Bundle
+            Edit Fields
           </SecondaryButton>
           <SecondaryButton href={createNewPackageHref} className="gap-2">
             <Icon name="refresh" />
-            New Render
+            New Graphic
           </SecondaryButton>
         </div>
       </div>
@@ -654,322 +650,12 @@ function PackageReviewHeader({
         <div className="grid gap-2 sm:grid-cols-2">
           <ChecklistItem checked={requiredFieldsCompleted} label="Required fields completed" />
           <ChecklistItem checked={packageContext.previewApproved} label="Preview approved" />
-          <ChecklistItem checked={packageGenerated} label="Package generated" />
+          <ChecklistItem checked={packageGenerated} label="Graphics generated" />
           <ChecklistItem checked={packageDownloaded} label="Download ready files" />
         </div>
       </div>
     </section>
   );
-}
-
-function PlatformCopyCard({
-  packageContext,
-}: {
-  packageContext: {
-    quote?: string;
-    speakerName?: string;
-    speakerTitle?: string;
-    contextLine?: string;
-  };
-}) {
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const copyBlocks = useMemo(() => getPlatformCopyBlocks(packageContext), [packageContext]);
-
-  async function copyValue(key: string, value: string) {
-    await copyText(value);
-    setCopiedKey(key);
-    window.setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 1800);
-  }
-
-  return (
-    <CollapsibleSection title="Platform Copy">
-      <div className="space-y-2">
-        {copyBlocks.map((block) => (
-          <div
-            key={block.id}
-            className={`grid gap-3 rounded-lg border px-3 py-2 md:grid-cols-[8rem_1fr_auto] md:items-start ${
-              copiedKey === block.id ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"
-            }`}
-          >
-            <div>
-              <p className="text-sm font-semibold text-[#06153a]">{block.label}</p>
-              {copiedKey === block.id ? (
-                <p className="mt-1 text-xs font-semibold text-emerald-800">Copied</p>
-              ) : null}
-            </div>
-            <p className="line-clamp-3 whitespace-pre-line text-sm leading-6 text-slate-700">{block.text}</p>
-            <button
-              type="button"
-              onClick={() => copyValue(block.id, block.text)}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
-            >
-              <Icon name="copy" />
-              {copiedKey === block.id ? "Copied" : "Copy"}
-            </button>
-          </div>
-        ))}
-      </div>
-    </CollapsibleSection>
-  );
-}
-
-function ArchiveMetadataCard({
-  packageContext,
-  outputs,
-  readyFileCount,
-  placeholderFileCount,
-}: {
-  packageContext: {
-    quote?: string;
-    speakerName?: string;
-    speakerTitle?: string;
-    contextLine?: string;
-    generatedAt: string;
-  };
-  outputs: MvpOutputFormat[];
-  readyFileCount: number;
-  placeholderFileCount: number;
-}) {
-  const [copiedKey, setCopiedKey] = useState<"packageId" | "filenameStem" | "metadata" | null>(null);
-  const metadata = useMemo(
-    () => getArchiveMetadata(packageContext, outputs, readyFileCount, placeholderFileCount),
-    [packageContext, outputs, readyFileCount, placeholderFileCount],
-  );
-  const selectedOutputText = metadata.selectedOutputs.length > 0 ? metadata.selectedOutputs.join(", ") : "Not provided";
-
-  async function copyValue(key: "packageId" | "filenameStem" | "metadata", value: string) {
-    await copyText(value);
-    setCopiedKey(key);
-    window.setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 1800);
-  }
-
-  return (
-    <CollapsibleSection title="Archive Details">
-      <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <MetadataValue label="Package Type" value={metadata.packageType} />
-          <MetadataValue label="Status" value={metadata.status} />
-          <MetadataValue label="Speaker" value={metadata.speaker} />
-          <MetadataValue label="Speaker Title" value={metadata.speakerTitle} />
-          <MetadataValue label="Context" value={metadata.context} className="sm:col-span-2" />
-          <MetadataValue label="Selected Outputs" value={selectedOutputText} className="sm:col-span-2" />
-          <MetadataValue label="Ready Files" value={String(metadata.readyFiles)} />
-          <MetadataValue label="Not Connected" value={String(metadata.placeholderFiles)} />
-          <MetadataValue label="Created" value={metadata.generatedDate} className="sm:col-span-2" />
-          <MetadataValue label="Suggested Package ID" value={metadata.suggestedPackageId} className="sm:col-span-2" />
-          <MetadataValue label="Suggested Filename Stem" value={metadata.suggestedFilenameStem} className="sm:col-span-2" />
-          <MetadataValue label="Suggested Tags" value={metadata.suggestedTags.join(", ")} className="sm:col-span-2" />
-        </div>
-
-        <div className="flex min-w-48 flex-col gap-2">
-          <CopyButton
-            label={copiedKey === "packageId" ? "Copied Package ID" : "Copy Package ID"}
-            onClick={() => copyValue("packageId", metadata.suggestedPackageId)}
-          />
-          <CopyButton
-            label={copiedKey === "filenameStem" ? "Copied Filename Stem" : "Copy Filename Stem"}
-            onClick={() => copyValue("filenameStem", metadata.suggestedFilenameStem)}
-          />
-          <CopyButton
-            label={copiedKey === "metadata" ? "Copied Details JSON" : "Copy Details JSON"}
-            onClick={() => copyValue("metadata", JSON.stringify(metadata, null, 2))}
-          />
-          {copiedKey ? <p className="text-sm font-semibold text-emerald-800">Copied to clipboard.</p> : null}
-        </div>
-      </div>
-    </CollapsibleSection>
-  );
-}
-
-function MetadataValue({
-  label,
-  value,
-  className = "",
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="break-words font-medium leading-6 text-[#06153a]">{value.trim() || "Not provided"}</p>
-    </div>
-  );
-}
-
-function CopyButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-[#06153a] hover:bg-slate-50"
-    >
-      <Icon name="copy" />
-      {label}
-    </button>
-  );
-}
-
-function getPlatformCopyBlocks(packageContext: {
-  quote?: string;
-  speakerName?: string;
-  speakerTitle?: string;
-  contextLine?: string;
-}) {
-  const quote = packageContext.quote?.trim() || "Quote not provided.";
-  const speaker = packageContext.speakerName?.trim() || "Speaker not provided.";
-  const speakerTitle = packageContext.speakerTitle?.trim();
-  const context = packageContext.contextLine?.trim();
-  const attribution = speakerTitle ? `${speaker}, ${speakerTitle}` : speaker;
-
-  return [
-    {
-      id: "x",
-      label: "X / Twitter",
-      text: `"${quote}"\n\n- ${attribution}`,
-    },
-    {
-      id: "instagram",
-      label: "Instagram",
-      text: [`"${quote}"`, attribution, context ? `Context: ${context}` : ""].filter(Boolean).join("\n\n"),
-    },
-    {
-      id: "facebook",
-      label: "Facebook",
-      text: [`Quote card: "${quote}"`, `Attributed to ${attribution}.`, context ? `Context: ${context}` : ""]
-        .filter(Boolean)
-        .join("\n\n"),
-    },
-    {
-      id: "threads",
-      label: "Threads",
-      text: [`"${quote}"`, `- ${speaker}`, context || ""].filter(Boolean).join("\n\n"),
-    },
-    {
-      id: "altText",
-      label: "Alt Text",
-      text: `Quote card graphic featuring the quote "${quote}" attributed to ${attribution}.`,
-    },
-    {
-      id: "sourceNote",
-      label: "Source / Context Note",
-      text: `Context: ${context || "Context not provided."}\nAttribution: ${attribution}.`,
-    },
-  ];
-}
-
-function getArchiveMetadata(
-  packageContext: {
-    quote?: string;
-    speakerName?: string;
-    speakerTitle?: string;
-    contextLine?: string;
-    generatedAt: string;
-  },
-  outputs: MvpOutputFormat[],
-  readyFileCount: number,
-  placeholderFileCount: number,
-) {
-  const speakerSlug = toSlug(packageContext.speakerName, "not-provided");
-  const contextSlug = toSlug(packageContext.contextLine, "");
-  const dateStamp = getDateStamp(packageContext.generatedAt);
-  const selectedOutputs = outputs.map((output) => `${output.type === "video" ? "Video" : "Still"} ${output.label}`);
-  const suggestedPackageId = `quote-card-${dateStamp}-${speakerSlug}`;
-  const suggestedFilenameStem = contextSlug ? `quote-card-${speakerSlug}-${contextSlug}` : `quote-card-${speakerSlug}`;
-  const suggestedTags = uniqueValues([
-    "quote-card",
-    packageContext.speakerName ? speakerSlug : "",
-    ...getContextTags(packageContext.contextLine),
-    "ready-for-review",
-  ]);
-
-  return {
-    packageType: "Quote Card",
-    status: "Ready",
-    speaker: packageContext.speakerName?.trim() || "Not provided",
-    speakerTitle: packageContext.speakerTitle?.trim() || "Not provided",
-    context: packageContext.contextLine?.trim() || "Not provided",
-    selectedOutputs,
-    readyFiles: readyFileCount,
-    placeholderFiles: placeholderFileCount,
-    generatedDate: getGeneratedDateLabel(packageContext.generatedAt),
-    suggestedPackageId,
-    suggestedFilenameStem,
-    suggestedTags,
-  };
-}
-
-function getGeneratedDateLabel(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Not provided";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function getDateStamp(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "date-not-provided";
-  }
-
-  return date.toISOString().slice(0, 10);
-}
-
-function getContextTags(value?: string) {
-  if (!value) {
-    return [];
-  }
-
-  const stopWords = new Set(["and", "for", "from", "into", "that", "the", "this", "with"]);
-
-  return uniqueValues(
-    value
-      .split(/\s+/)
-      .map((word) => toSlug(word, ""))
-      .filter((word) => word.length > 2 && !stopWords.has(word))
-      .slice(0, 4),
-  );
-}
-
-function uniqueValues(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function toSlug(value: string | undefined, fallback: string) {
-  return slugify(value ?? "") || fallback;
-}
-
-async function copyText(value: string) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-    return;
-  }
-
-  const textarea = document.createElement("textarea");
-
-  textarea.value = value;
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.append(textarea);
-  textarea.focus();
-  textarea.select();
-  document.execCommand("copy");
-  textarea.remove();
 }
 
 function SummaryValue({ label, value }: { label: string; value?: string }) {
@@ -1032,7 +718,7 @@ function DownloadAllPackage({
   const readyCount = files.length;
   const disabled = readyCount === 0 || isDownloading;
   const allOutputsReady = readyCount === totalOutputs;
-  const buttonLabel = downloaded ? "Downloaded ZIP" : allOutputsReady ? "Download All Package" : "Download Ready Files";
+  const buttonLabel = downloaded ? "Downloaded ZIP" : allOutputsReady ? "Download All ZIP" : "Download Ready Files";
 
   async function downloadAll() {
     if (disabled) {
@@ -1099,7 +785,7 @@ function DownloadAllPackage({
             ? "Only completed connected renders are downloaded."
             : "Available when at least one output is ready."}
         </p>
-        {downloaded ? <p className="mt-2 text-sm font-semibold text-emerald-800">Package downloaded.</p> : null}
+        {downloaded ? <p className="mt-2 text-sm font-semibold text-emerald-800">ZIP downloaded.</p> : null}
         {downloadStatus ? (
           <p
             className={`mt-2 text-sm font-semibold ${
@@ -1201,6 +887,7 @@ function DeliveryOutputCard({
         <OutputDownloadAction
           canDownload={canDownload}
           downloaded={downloaded}
+          downloadLabel={output.type === "still" ? "Download PNG" : "Download File"}
           unavailableLabel={getUnavailableActionLabel(state)}
           onClick={downloadFile}
         />

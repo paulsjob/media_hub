@@ -32,7 +32,7 @@ interface RenderStartResult {
   error?: string;
 }
 
-const liveRenderOutputIds = new Set(["still-1920x1080", "still-1080x1920"]);
+const liveRenderOutputIds = new Set(["still-1920x1080", "still-1080x1080", "still-1080x1920"]);
 
 export function PackageGenerator({
   template,
@@ -51,7 +51,7 @@ export function PackageGenerator({
   const defaultSelectedIds =
     initialSelectedIds && initialSelectedIds.length > 0
       ? initialSelectedIds
-      : ["still-1920x1080", "still-1080x1080", "video-1920x1080"];
+      : ["still-1920x1080", "still-1080x1080", "still-1080x1920"];
   const [selectedIds, setSelectedIds] = useState<string[]>(defaultSelectedIds);
   const [activeOutputId, setActiveOutputId] = useState(defaultSelectedIds[0] ?? "");
   const [content, setContent] = useState<PreviewContent>(() => ({
@@ -291,16 +291,11 @@ export function PackageGenerator({
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] xl:items-start">
         <div className="space-y-4">
-          <SectionCard title="Select Package Outputs" className="p-4">
-            <OutputSelector
-              outputs={outputs}
-              selectedIds={selectedIds}
-              activeOutputId={activeOutputId}
-              onToggle={toggleOutput}
-            />
+          <SectionCard title="Template Selection">
+            <TemplateSummary />
           </SectionCard>
 
-          <SectionCard title="Template Fields" action={<Icon name="sliders" className="h-5 w-5 text-slate-500" />}>
+          <SectionCard title="Content Fields" action={<Icon name="sliders" className="h-5 w-5 text-slate-500" />}>
             <div className="grid gap-4">
               {template.required_fields.map((fieldName) => {
                 const key = fieldMap[fieldName] ?? "quote";
@@ -332,6 +327,15 @@ export function PackageGenerator({
               })}
               <BrandControl value={content.brand} onChange={(value) => updateContent("brand", value)} />
             </div>
+          </SectionCard>
+
+          <SectionCard title="Output Sizes" className="p-4">
+            <OutputSelector
+              outputs={outputs}
+              selectedIds={selectedIds}
+              activeOutputId={activeOutputId}
+              onToggle={toggleOutput}
+            />
           </SectionCard>
         </div>
 
@@ -397,10 +401,35 @@ export function PackageGenerator({
             className="gap-2"
           >
             <Icon name="package" />
-            {isGenerating ? "Rendering Package..." : "Render Package"}
+            {isGenerating ? "Generating Graphics..." : "Generate Graphics"}
           </ButtonLike>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function TemplateSummary() {
+  return (
+    <div className="grid gap-4">
+      <div className="flex items-start gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-[var(--silver)] bg-[var(--light-gray)] text-sm font-bold text-[var(--navy-blue)]">
+          QT
+        </div>
+        <div>
+          <h2 className="text-xl font-extrabold text-[var(--navy-blue)]">Quote Card</h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--slate-blue)]">
+            Fast quote graphics for social and digital use.
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {["16:9 Landscape", "1:1 Square", "9:16 Vertical"].map((size) => (
+          <span key={size} className="chip bg-[var(--light-gray)] text-[var(--navy-blue)]">
+            {size}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -480,48 +509,29 @@ function OutputSelector({
   onToggle: (id: string) => void;
 }) {
   return (
-    <div className="grid gap-2">
-      {(["still", "video"] as const).map((type) => (
-        <div key={type} className="flex items-center gap-2">
-          <span
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold text-[#06153a]"
-            title={type === "still" ? "Still outputs" : "Video outputs"}
-            aria-label={type === "still" ? "Still outputs" : "Video outputs"}
-          >
-            {type === "still" ? "IMG" : "PLAY"}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {outputs
-              .filter((output) => output.type === type)
-              .map((output) => {
-                const selected = selectedIds.includes(output.id);
-                const active = activeOutputId === output.id;
-                const selectedClass =
-                  output.type === "still"
-                    ? "border-emerald-600 bg-emerald-600 text-white"
-                    : "border-blue-600 bg-blue-600 text-white";
+    <div className="grid gap-2 sm:grid-cols-3">
+      {outputs.map((output) => {
+        const selected = selectedIds.includes(output.id);
+        const active = activeOutputId === output.id;
 
-                return (
-                  <button
-                    key={output.id}
-                    type="button"
-                    onClick={() => onToggle(output.id)}
-                    aria-pressed={selected}
-                    title={getOutputTitle(output)}
-                    className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
-                      selected
-                        ? `${selectedClass} ${active ? "ring-2 ring-slate-300 ring-offset-1" : ""}`
-                        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
-                    }`}
-                  >
-                    <RatioGlyph ratio={output.aspectLabel} active={active} selected={selected} />
-                    <span>{output.aspectLabel}</span>
-                  </button>
-                );
-              })}
-          </div>
-        </div>
-      ))}
+        return (
+          <button
+            key={output.id}
+            type="button"
+            onClick={() => onToggle(output.id)}
+            aria-pressed={selected}
+            title={getOutputTitle(output)}
+            className={`flex min-h-14 items-center gap-3 rounded-md border px-3 text-left text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--flame)] ${
+              selected
+                ? `border-[var(--flame)] bg-white text-[var(--navy-blue)] ${active ? "ring-2 ring-orange-200" : ""}`
+                : "border-slate-300 bg-white text-slate-600 hover:border-[var(--flame)] hover:bg-slate-50"
+            }`}
+          >
+            <RatioGlyph ratio={output.aspectLabel} active={active} selected={selected} />
+            <span>{getOutputDisplayLabel(output)}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -663,6 +673,16 @@ function getOutputTitle(output: MvpOutputFormat) {
   return `${output.width}x${output.height} - ${output.aspectLabel} - ${output.recommendedPlatforms
     .slice(0, 2)
     .join(", ")}`;
+}
+
+function getOutputDisplayLabel(output: MvpOutputFormat) {
+  const labelByRatio: Record<string, string> = {
+    "16:9": "16:9 Landscape",
+    "1:1": "1:1 Square",
+    "9:16": "9:16 Vertical",
+  };
+
+  return labelByRatio[output.aspectLabel] ?? `${output.aspectLabel} ${output.label}`;
 }
 
 function getFieldValue(fields: PackageField[], fieldName: string) {

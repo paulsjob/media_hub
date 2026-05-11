@@ -1,6 +1,5 @@
 import { PackageGenerator } from "@/components/package-generator";
-import { Icon } from "@/components/icons";
-import { MvpShell, SecondaryButton } from "@/components/ui";
+import { MvpShell } from "@/components/ui";
 import { mediaLab } from "@/lib/media-lab-service";
 import type { PreviewContent } from "@/lib/preview-state";
 
@@ -25,26 +24,25 @@ export default async function GeneratePage({
   const initialContent = getInitialContent(params);
   const initialSelectedIds = getInitialSelectedIds(params.outputs, params.size);
   const startedFromPreviewTest = hasPreviewTestParams(params);
+  const liteOutputs = mediaLab
+    .getOutputFormats()
+    .filter((output) =>
+      ["still-1920x1080", "still-1080x1080", "still-1080x1920"].includes(output.id),
+    );
 
   return (
     <MvpShell>
       <div className="mb-8 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
         <div>
-          <p className="mb-2 inline-block bg-[var(--powder-blue)] px-2 py-1 text-sm font-bold uppercase tracking-wide text-[var(--navy-blue)]">
-            Production / Quote Card
+          <p className="mb-2 inline-block rounded-md bg-[var(--powder-blue)] px-2 py-1 text-sm font-bold text-[var(--navy-blue)]">
+            Quote Card
           </p>
-          <h1 className="text-4xl font-extrabold tracking-tight text-[var(--navy-blue)] md:text-6xl">
-            Render Quote Card
+          <h1 className="text-4xl font-extrabold tracking-tight text-[var(--navy-blue)] md:text-5xl">
+            Generate templated graphics in multiple sizes.
           </h1>
           <p className="mt-3 max-w-2xl text-base font-medium leading-7 text-[var(--black)]">
-            Input structured data to render this asset bundle.
+            Choose a template, fill the fields, select sizes, and download finished PNGs.
           </p>
-        </div>
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          <SecondaryButton href="/templates" className="gap-2">
-            <Icon name="template" />
-            Change Template
-          </SecondaryButton>
         </div>
       </div>
 
@@ -60,7 +58,7 @@ export default async function GeneratePage({
       <PackageGenerator
         template={preview.template}
         fields={view?.packageFields ?? []}
-        outputs={mediaLab.getOutputFormats()}
+        outputs={liteOutputs}
         initialContent={initialContent}
         initialSelectedIds={initialSelectedIds}
       />
