@@ -35,7 +35,7 @@ interface ModeckRenderStatusResult {
   };
 }
 
-const MODECK_STATUS_POLL_INTERVAL_MS = 2500;
+const MODECK_STATUS_POLL_INTERVAL_MS = 5000;
 const MODECK_STATUS_MAX_ATTEMPTS = 120;
 
 export function PackageResults({
@@ -112,7 +112,9 @@ export function PackageResults({
         ),
     [outputs, packageName, renderResults],
   );
-  const pendingModeckRenders = resultList.filter(isPendingModeckRender);
+  const pendingModeckRenders = resultList.filter(
+    (result) => isPendingModeckRender(result) && !downloadedOutputIds.includes(result.outputId),
+  );
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -341,6 +343,9 @@ async function fetchRenderStatus(render: PackageRenderResult) {
     editId: render.editId,
     outputId: render.outputId,
   });
+
+  logModeckStatusRequest(render);
+
   const response = await fetch(`/api/modeck/render/status?${params.toString()}`);
   const update = (await response.json()) as Partial<ModeckRenderStatusResult>;
 
@@ -348,6 +353,19 @@ async function fetchRenderStatus(render: PackageRenderResult) {
     update,
     responseOk: response.ok,
   };
+}
+
+function logModeckStatusRequest(render: PackageRenderResult) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-status-poll-request]", {
+    outputId: render.outputId,
+    editId: render.editId,
+    currentStatus: render.status ?? null,
+    intervalMs: MODECK_STATUS_POLL_INTERVAL_MS,
+  });
 }
 
 function shouldContinuePolling(

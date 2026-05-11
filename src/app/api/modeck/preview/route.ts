@@ -32,7 +32,7 @@ interface ModeckPreviewOption {
 type ModeckPreviewOutputConfig = {
   mogrt: string;
   tuning?: Parameters<typeof buildQuoteBoxOptions>[1];
-  frame?: number;
+  frame?: number | null;
   previewFrame?: number | null;
 };
 
@@ -42,8 +42,8 @@ const previewOutputConfigs: Record<string, ModeckPreviewOutputConfig> = {
   },
   "1:1": {
     mogrt: "MD_Quote_Card_1x1",
-    frame: 10,
-    previewFrame: null,
+    frame: 0,
+    previewFrame: 0,
     tuning: {
       quoteFontSize: 70,
       quoteLineSpacing: -70,
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   const templateName = body.deck?.trim() || MODECK_QUOTE_BOX_TEST_DECK;
   const mogrtName = body.mogrt?.trim() || previewConfig.mogrt;
   const requestedFrame = Number(body.frame ?? 0);
-  const frame = previewConfig.frame ?? requestedFrame;
+  const frame = previewConfig.frame === null ? undefined : previewConfig.frame ?? requestedFrame;
   const previewFrame = previewConfig.previewFrame === null ? undefined : previewConfig.previewFrame ?? requestedFrame;
   const headshotFilename = body.headshotFilename?.trim() ?? "";
   const fields = {
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
     apiKey,
     deck: templateName,
     size: "",
-    frame,
+    ...(typeof frame === "number" ? { frame } : {}),
     mogrt: {
       name: mogrtName,
       options: options.map(({ name, value }) => ({ name, value })),
@@ -152,8 +152,10 @@ export async function POST(request: Request) {
       outputId: body.outputId ?? `${size.width}x${size.height}`,
       mogrtName,
       frame: previewPayload.frame,
+      hasFrame: Object.hasOwn(previewPayload, "frame"),
       previewFrame: previewPayload.previewFrame,
       hasPreviewFrame: Object.hasOwn(previewPayload, "previewFrame"),
+      payloadKeys: Object.keys(previewPayload).filter((key) => key !== "apiKey"),
       options,
     });
 
@@ -174,8 +176,10 @@ export async function POST(request: Request) {
       outputId: body.outputId ?? `${size.width}x${size.height}`,
       mogrtName,
       frame: previewPayload.frame,
+      hasFrame: Object.hasOwn(previewPayload, "frame"),
       previewFrame: previewPayload.previewFrame,
       hasPreviewFrame: Object.hasOwn(previewPayload, "previewFrame"),
+      payloadKeys: Object.keys(previewPayload).filter((key) => key !== "apiKey"),
       imageBase64,
     });
 
@@ -220,16 +224,20 @@ function logOutgoingModeckOptions({
   outputId,
   mogrtName,
   frame,
+  hasFrame,
   previewFrame,
   hasPreviewFrame,
+  payloadKeys,
   options,
 }: {
   route: "preview" | "render";
   outputId: string;
   mogrtName: string;
   frame?: number;
+  hasFrame?: boolean;
   previewFrame?: number;
   hasPreviewFrame?: boolean;
+  payloadKeys?: string[];
   options: Array<{ name: string; value: string | number }>;
 }) {
   if (process.env.NODE_ENV === "production") {
@@ -238,13 +246,15 @@ function logOutgoingModeckOptions({
 
   const brand = options.find((option) => option.name === "BRAND")?.value;
 
-  console.info("[modeck-outgoing-options]", {
+  console.info("[modeck-preview-call]", {
     route,
     outputId,
     mogrtName,
     frame,
+    hasFrame,
     previewFrame,
     hasPreviewFrame,
+    payloadKeys,
     brandValue: brand,
     brandType: typeof brand,
     optionKeys: options.map((option) => option.name),
@@ -255,15 +265,19 @@ function logModeckPreviewResponse({
   outputId,
   mogrtName,
   frame,
+  hasFrame,
   previewFrame,
   hasPreviewFrame,
+  payloadKeys,
   imageBase64,
 }: {
   outputId: string;
   mogrtName: string;
-  frame: number;
+  frame?: number;
+  hasFrame: boolean;
   previewFrame?: number;
   hasPreviewFrame: boolean;
+  payloadKeys: string[];
   imageBase64: string | null;
 }) {
   if (process.env.NODE_ENV === "production") {
@@ -274,8 +288,10 @@ function logModeckPreviewResponse({
     outputId,
     mogrtName,
     frame,
+    hasFrame,
     previewFrame,
     hasPreviewFrame,
+    payloadKeys,
     imageBase64Length: imageBase64?.length ?? 0,
   });
 }
@@ -378,7 +394,7 @@ function summarizeRequest(payload: {
   mogrtName: string;
   width: number;
   height: number;
-  frame: number;
+  frame?: number;
   previewFrame?: number;
   options: Array<{ name: string; value: string | number }>;
   media?: Array<{ optionName: string; uploadedFilename?: string; mediaLabReference: string }>;

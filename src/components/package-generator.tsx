@@ -74,6 +74,7 @@ export function PackageGenerator({
   } | null>(null);
   const [headshotError, setHeadshotError] = useState("");
   const [fileInputKey, setFileInputKey] = useState(0);
+  const generatePackageInFlightRef = useRef(false);
   const previewContent = useMemo(
     () => ({
       ...content,
@@ -209,10 +210,11 @@ export function PackageGenerator({
   }
 
   async function generatePackage() {
-    if (selectedIds.length === 0 || isGenerating || !previewApprovedEffective) {
+    if (selectedIds.length === 0 || isGenerating || generatePackageInFlightRef.current || !previewApprovedEffective) {
       return;
     }
 
+    generatePackageInFlightRef.current = true;
     setIsGenerating(true);
     const headshotReference = getModeckHeadshotFilename(content.headshot);
 
@@ -236,10 +238,12 @@ export function PackageGenerator({
     const renderResults = await Promise.all(
       renderRequests.map((request) => mockModeckAdapter.requestRender(request)),
     );
+    const liveRenderOutputIdsToStart = selectedIds.filter((outputId) => liveRenderOutputIds.has(outputId));
+
+    logModeckRenderCreationPlan(liveRenderOutputIdsToStart);
+
     const liveRenderResults = await Promise.all(
-      selectedIds
-        .filter((outputId) => liveRenderOutputIds.has(outputId))
-        .map((outputId) => startLiveModeckRender(outputId, content)),
+      liveRenderOutputIdsToStart.map((outputId) => startLiveModeckRender(outputId, content)),
     );
     const liveRenderByOutputId = new Map(
       liveRenderResults
@@ -436,6 +440,8 @@ function TemplateSummary() {
 
 async function startLiveModeckRender(outputId: string, content: PreviewContent): Promise<RenderStartResult> {
   try {
+    logModeckRenderCreateRequest(outputId);
+
     const response = await fetch("/api/modeck/render", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -452,6 +458,8 @@ async function startLiveModeckRender(outputId: string, content: PreviewContent):
     });
     const data = (await response.json()) as RenderStartResult;
 
+    logModeckRenderCreateResponse(outputId, data, response.ok);
+
     return response.ok
       ? { ...data, outputId: data.outputId ?? outputId }
       : { ...data, ok: false, outputId: data.outputId ?? outputId };
@@ -462,6 +470,42 @@ async function startLiveModeckRender(outputId: string, content: PreviewContent):
       error: error instanceof Error ? error.message : "Render request failed.",
     };
   }
+}
+
+function logModeckRenderCreationPlan(outputIds: string[]) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-render-create-plan]", {
+    outputIds,
+    renderJobCount: outputIds.length,
+  });
+}
+
+function logModeckRenderCreateRequest(outputId: string) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-render-create-request]", {
+    outputId,
+  });
+}
+
+function logModeckRenderCreateResponse(outputId: string, result: RenderStartResult, responseOk: boolean) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-render-create-response]", {
+    outputId: result.outputId ?? outputId,
+    editId: result.editId ?? null,
+    status: result.status ?? null,
+    responseOk,
+    ok: result.ok,
+    error: result.error ?? null,
+  });
 }
 
 function GeneratorField({

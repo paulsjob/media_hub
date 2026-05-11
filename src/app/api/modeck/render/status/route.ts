@@ -27,6 +27,8 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, error: "Missing editId." }, { status: 400 });
   }
 
+  logRenderStatusRequest({ editId, outputId });
+
   const response = await fetch(`${config.apiBaseUrl}/renderstatus`, {
     method: "POST",
     headers: {
@@ -63,6 +65,23 @@ export async function GET(request: Request) {
     ...normalized,
     responseSummary: summarizeResponse(responseJson ?? responseText),
     ...(debug ? { debug } : {}),
+  });
+}
+
+function logRenderStatusRequest({
+  editId,
+  outputId,
+}: {
+  editId: string;
+  outputId: string;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-status-route]", {
+    editId,
+    outputId,
   });
 }
 

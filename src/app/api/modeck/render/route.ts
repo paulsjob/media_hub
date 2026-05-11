@@ -181,7 +181,7 @@ function logOutgoingModeckOptions({
 
   const brand = options.find((option) => option.name === "BRAND")?.value;
 
-  console.info("[modeck-outgoing-options]", {
+  console.info("[modeck-render-create-route]", {
     route,
     outputId,
     mogrtName,
