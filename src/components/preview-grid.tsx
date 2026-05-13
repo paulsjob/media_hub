@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PreviewStatus } from "@/components/preview-status";
 import { TemplatePreviewRenderer } from "@/components/template-preview-renderer";
 import type { MvpOutputFormat } from "@/lib/output-formats";
@@ -53,7 +53,13 @@ interface PreviewOption {
   ratio: PreviewRatio;
 }
 
-const connectedPreviewOutputIds = new Set(["still-1920x1080", "still-1080x1080", "still-1080x1920"]);
+const connectedPreviewOutputIds = new Set([
+  "still-1920x1080",
+  "still-1080x1080",
+  "still-1080x1350",
+  "still-1080x1920",
+]);
+const PREVIEW_REQUEST_DEBOUNCE_MS = 350;
 const previewCache = new Map<string, ModeckPreviewSnapshot>();
 const previewInFlight = new Map<string, Promise<ModeckPreviewSnapshot>>();
 
@@ -127,6 +133,20 @@ export function PreviewGrid({
   templateId?: string;
 }) {
   const [modeckPreviews, setModeckPreviews] = useState<Record<string, ModeckPreviewSnapshot>>({});
+  const modeckContent = useMemo(
+    () => ({
+      quote: content.quote ?? "",
+      speakerName: content.speakerName ?? "",
+      speakerTitle: content.speakerTitle ?? "",
+      contextLine: content.contextLine ?? "",
+      headshot: content.headshot ?? "",
+      brand: String(normalizeQuoteCardBrandValue(content.brand ?? "2")),
+    }),
+    [content.quote, content.speakerName, content.speakerTitle, content.contextLine, content.headshot, content.brand],
+  );
+  const [debouncedContent, setDebouncedContent] = useState(modeckContent);
+  const previewInputPending = debouncedContent !== modeckContent;
+  const previewCycleRef = useRef(0);
   const previewOptions = useMemo(
     () => outputs.filter((output) => selectedOutputIds.includes(output.id)).map(outputToPreviewOption),
     [outputs, selectedOutputIds],
@@ -140,9 +160,9 @@ export function PreviewGrid({
   const previewRequests = useMemo(
     () =>
       previewOptions
-        .map((option, index) => buildPreviewRequest(option, index, content, templateId))
+        .map((option, index) => buildPreviewRequest(option, index, debouncedContent, templateId))
         .filter((request): request is ModeckPreviewRequest => Boolean(request)),
-    [previewOptions, content, templateId],
+    [previewOptions, debouncedContent, templateId],
   );
   const activePreviewRequest = activeOption
     ? previewRequests.find((request) => request.outputId === activeOption.output.id)
@@ -155,7 +175,7 @@ export function PreviewGrid({
   const cachedModeckPreview = requestSignature
     ? modeckPreviews[requestSignature] ?? previewCache.get(requestSignature)
     : undefined;
-  const allConnectedPreviewsReady = previewRequests.every((previewRequest) => {
+  const allConnectedPreviewsReady = !previewInputPending && previewRequests.every((previewRequest) => {
     const preview = modeckPreviews[previewRequest.previewCacheKey] ?? previewCache.get(previewRequest.previewCacheKey);
 
     return preview?.state === "loaded" && Boolean(preview.imageSrc);
@@ -183,6 +203,17 @@ export function PreviewGrid({
       };
     }
 
+    if (previewInputPending) {
+      return {
+        signature: requestSignature,
+        state: "loading",
+        imageSrc: null,
+        message: "Rendering",
+        durationMs: null,
+        imageSize: null,
+      };
+    }
+
     if (cachedModeckPreview) {
       return cachedModeckPreview;
     }
@@ -195,7 +226,15 @@ export function PreviewGrid({
       durationMs: null,
       imageSize: null,
     };
-  }, [activeRatio, cachedModeckPreview, canUseModeckPreview, requestSignature]);
+  }, [activeRatio, cachedModeckPreview, canUseModeckPreview, previewInputPending, requestSignature]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedContent(modeckContent);
+    }, PREVIEW_REQUEST_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [modeckContent]);
 
   useEffect(() => {
     onPreviewStateChange?.({
@@ -226,10 +265,27 @@ export function PreviewGrid({
 
     let mounted = true;
 
+    const cycleNumber = previewCycleRef.current + 1;
+    previewCycleRef.current = cycleNumber;
+    const cycleHash = hashPreviewKey(currentPreviewSignature);
+    const stats = {
+      fired: 0,
+      skippedCompleted: 0,
+      skippedPending: 0,
+      skippedExistingState: 0,
+    };
+
     previewRequests.forEach((previewRequest) => {
       const cachedPreview = previewCache.get(previewRequest.previewCacheKey);
 
-      if (cachedPreview) {
+      if (cachedPreview?.state === "loaded") {
+        stats.skippedCompleted += 1;
+        logPreviewRequestDecision({
+          previewRequest,
+          cycleHash,
+          reason: "already-completed",
+          fired: false,
+        });
         logPreviewCache({
           previewRequest,
           cache: "hit",
@@ -247,6 +303,13 @@ export function PreviewGrid({
       const inFlightPreview = previewInFlight.get(previewRequest.previewCacheKey);
 
       if (inFlightPreview) {
+        stats.skippedPending += 1;
+        logPreviewRequestDecision({
+          previewRequest,
+          cycleHash,
+          reason: "already-pending",
+          fired: false,
+        });
         logPreviewCache({
           previewRequest,
           cache: "miss",
@@ -267,6 +330,13 @@ export function PreviewGrid({
         return;
       }
 
+      stats.fired += 1;
+      logPreviewRequestDecision({
+        previewRequest,
+        cycleHash,
+        reason: "new-or-changed-payload",
+        fired: true,
+      });
       logPreviewCache({
         previewRequest,
         cache: "miss",
@@ -293,10 +363,17 @@ export function PreviewGrid({
       });
     });
 
+    logPreviewCycle({
+      cycleNumber,
+      cycleHash,
+      selectedOutputCount: previewRequests.length,
+      stats,
+    });
+
     return () => {
       mounted = false;
     };
-  }, [previewRequests]);
+  }, [currentPreviewSignature, previewRequests]);
 
   function showPreviousPreview() {
     const nextIndex = safeActiveIndex === 0 ? previewOptions.length - 1 : safeActiveIndex - 1;
@@ -328,7 +405,7 @@ export function PreviewGrid({
               </span>
             </div>
             <div className="mt-0.5 flex min-h-7 flex-wrap items-center justify-between gap-2">
-              <span className="text-sm text-slate-600">{getActiveFormatLabel(activeOption.output)}</span>
+              <span className="text-sm text-slate-600">{getPreviewOutputLabel(activeOption.output)}</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -574,6 +651,71 @@ function logPreviewCache({
   });
 }
 
+function logPreviewRequestDecision({
+  previewRequest,
+  cycleHash,
+  reason,
+  fired,
+}: {
+  previewRequest: ModeckPreviewRequest;
+  cycleHash: string;
+  reason: string;
+  fired: boolean;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-preview-request-decision]", {
+    cycleHash,
+    requestHash: hashPreviewKey(previewRequest.previewCacheKey),
+    outputId: previewRequest.outputId,
+    reason,
+    fired,
+  });
+}
+
+function logPreviewCycle({
+  cycleNumber,
+  cycleHash,
+  selectedOutputCount,
+  stats,
+}: {
+  cycleNumber: number;
+  cycleHash: string;
+  selectedOutputCount: number;
+  stats: {
+    fired: number;
+    skippedCompleted: number;
+    skippedPending: number;
+    skippedExistingState: number;
+  };
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-preview-cycle]", {
+    cycleNumber,
+    cycleHash,
+    selectedOutputCount,
+    totalPreviewRequestsFired: stats.fired,
+    skippedCompleted: stats.skippedCompleted,
+    skippedPending: stats.skippedPending,
+    skippedExistingState: stats.skippedExistingState,
+  });
+}
+
+function hashPreviewKey(value: string) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (Math.imul(31, hash) + value.charCodeAt(index)) | 0;
+  }
+
+  return Math.abs(hash).toString(36);
+}
+
 function storeApprovedPreviewThumbnail(previewRequest: ModeckPreviewRequest, imageSrc: string) {
   try {
     window.sessionStorage.setItem(
@@ -674,6 +816,14 @@ function outputToPreviewOption(output: MvpOutputFormat): PreviewOption {
       outputIds: [output.id],
     } satisfies PreviewRatio,
   };
+}
+
+function getPreviewOutputLabel(output: MvpOutputFormat) {
+  if (output.id === "still-1080x1350") {
+    return "1400x1800 \u00b7 4:5 \u00b7 Still";
+  }
+
+  return getActiveFormatLabel(output);
 }
 
 function getActiveFormatLabel(output: MvpOutputFormat) {

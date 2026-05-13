@@ -200,6 +200,17 @@ export function PackageResults({
         createNewPackageHref={createNewPackageHref}
       />
 
+      {pendingModeckRenders.length > 0 ? (
+        <div className="border border-[var(--powder-blue)] bg-slate-50 p-4 text-sm text-[var(--navy-blue)]">
+          <p className="font-semibold">
+            Rendering {pendingModeckRenders.length} {pluralize("output", pendingModeckRenders.length)}
+          </p>
+          <p className="mt-1 text-slate-600">
+            MoDeck is rendering final PNGs. This can take a bit for multiple sizes.
+          </p>
+        </div>
+      ) : null}
+
       <CollapsibleSection title="Output Previews" defaultOpen>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {outputs.map((output) => (
@@ -339,6 +350,7 @@ function ModeckRenderStatusPoller({
 }
 
 async function fetchRenderStatus(render: PackageRenderResult) {
+  const startedAt = performance.now();
   const params = new URLSearchParams({
     editId: render.editId,
     outputId: render.outputId,
@@ -348,6 +360,11 @@ async function fetchRenderStatus(render: PackageRenderResult) {
 
   const response = await fetch(`/api/modeck/render/status?${params.toString()}`);
   const update = (await response.json()) as Partial<ModeckRenderStatusResult>;
+  logPackageTiming({
+    stage: "client-status-poll",
+    outputId: render.outputId,
+    durationMs: Math.round(performance.now() - startedAt),
+  });
 
   return {
     update,
@@ -476,7 +493,7 @@ function VisualOutputPreviewCard({
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {output.type === "video" ? "Video" : "Still"}
           </p>
-          <h3 className="mt-1 font-semibold text-[#06153a]">{output.aspectLabel}</h3>
+          <h3 className="mt-1 font-semibold text-[#06153a]">{getUserFacingOutputLabel(output)}</h3>
         </div>
         <StatusPill label={downloaded ? "Downloaded" : getStateLabel(state)} />
       </div>
@@ -539,7 +556,7 @@ function PreviewFrame({
         )}
         {thumbnailUrl ? null : (
           <div className="relative grid gap-1 px-4">
-            <p className="text-lg font-semibold text-[#06153a]">{output.aspectLabel}</p>
+            <p className="text-lg font-semibold text-[#06153a]">{getUserFacingOutputLabel(output)}</p>
             <p className="text-xs text-slate-500">{getPreviewFrameLabel(output, state)}</p>
           </div>
         )}
@@ -749,31 +766,65 @@ function DownloadAllPackage({
     try {
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
-      const failedFiles: string[] = [];
-      let downloadedCount = 0;
+      const downloadStartedAt = performance.now();
+      const downloads = await Promise.all(
+        files.map(async (file) => {
+          const fileStartedAt = performance.now();
 
-      for (const file of files) {
-        try {
-          const response = await fetch(file.downloadUrl);
+          try {
+            const response = await fetch(file.downloadUrl);
+            const blob = response.ok ? await response.blob() : null;
+            logPackageTiming({
+              stage: "client-download-file",
+              outputId: file.output.id,
+              durationMs: Math.round(performance.now() - fileStartedAt),
+            });
 
-          if (!response.ok) {
-            failedFiles.push(file.filename);
-            continue;
+            if (!blob) {
+              return { file, blob: null };
+            }
+
+            return { file, blob };
+          } catch {
+            logPackageTiming({
+              stage: "client-download-file-error",
+              outputId: file.output.id,
+              durationMs: Math.round(performance.now() - fileStartedAt),
+            });
+            return { file, blob: null };
           }
+        }),
+      );
+      logPackageTiming({
+        stage: "client-download-files-total",
+        outputId: "package",
+        durationMs: Math.round(performance.now() - downloadStartedAt),
+      });
+      const failedFiles = downloads
+        .filter((download) => !download.blob)
+        .map((download) => download.file.filename);
+      const successfulDownloads = downloads.filter(
+        (download): download is { file: typeof files[number]; blob: Blob } => Boolean(download.blob),
+      );
 
-          zip.file(file.filename, await response.blob());
-          downloadedCount += 1;
-        } catch {
-          failedFiles.push(file.filename);
-        }
-      }
+      successfulDownloads.forEach((download) => {
+        zip.file(download.file.filename, download.blob);
+      });
+
+      const downloadedCount = successfulDownloads.length;
 
       if (downloadedCount === 0) {
         setDownloadStatus({ tone: "error", message: "No files could be downloaded." });
         return;
       }
 
+      const zipStartedAt = performance.now();
       const blob = await zip.generateAsync({ type: "blob" });
+      logPackageTiming({
+        stage: "client-zip-assembly",
+        outputId: "package",
+        durationMs: Math.round(performance.now() - zipStartedAt),
+      });
       downloadBlob(blob, `${packageName}.zip`);
       onDownloaded();
 
@@ -876,7 +927,7 @@ function DeliveryOutputCard({
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-[#06153a]">
-            {output.type === "video" ? "Video" : "Still"} - {output.label}
+            {getUserFacingOutputLabel(output)}
           </p>
           <StatusPill label={downloaded ? "Downloaded" : getStateLabel(state)} />
         </div>
@@ -943,7 +994,7 @@ function OutputThumbnail({
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {source === "mock-placeholder" ? "Not connected" : getStateLabel(state)}
           </p>
-          <p className="mt-1 text-sm font-semibold text-[#06153a]">{output.aspectLabel}</p>
+          <p className="mt-1 text-sm font-semibold text-[#06153a]">{getUserFacingOutputLabel(output)}</p>
           <p className="mt-0.5 text-xs text-slate-500">{output.type === "video" ? "Video" : "Still"}</p>
         </div>
       </div>
@@ -1173,13 +1224,40 @@ function isResultDownloadable(result: PackageRenderResult | undefined, resolvedD
 }
 
 async function downloadUrl(url: string, filename: string) {
+  const startedAt = performance.now();
   const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(`Could not download ${filename}.`);
   }
 
-  downloadBlob(await response.blob(), filename);
+  const blob = await response.blob();
+  logPackageTiming({
+    stage: "client-single-download",
+    outputId: filename,
+    durationMs: Math.round(performance.now() - startedAt),
+  });
+  downloadBlob(blob, filename);
+}
+
+function logPackageTiming({
+  stage,
+  outputId,
+  durationMs,
+}: {
+  stage: string;
+  outputId: string;
+  durationMs: number;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-package-timing]", {
+    stage,
+    outputId,
+    durationMs,
+  });
 }
 
 function pluralize(word: string, count: number) {
@@ -1202,6 +1280,14 @@ function getDownloadFilename(packageName: string, output: MvpOutputFormat) {
   const extension = output.type === "video" ? "mp4" : "png";
 
   return `${packageName}-${output.type}-${output.label}.${extension}`;
+}
+
+function getUserFacingOutputLabel(output: MvpOutputFormat) {
+  if (output.id === "still-1080x1350") {
+    return "1400x1800 \u00b7 4:5 \u00b7 Still";
+  }
+
+  return `${output.label} \u00b7 ${output.aspectLabel} \u00b7 ${output.type === "video" ? "Video" : "Still"}`;
 }
 
 function getSafeDownloadUrl(downloadUrl: string, editId: string | undefined) {

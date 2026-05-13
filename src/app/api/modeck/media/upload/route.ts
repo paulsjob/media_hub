@@ -1,4 +1,10 @@
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import path from "node:path";
+
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const maxUploadBytes = 10 * 1024 * 1024;
 
@@ -36,15 +42,46 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json(
-    {
-      ok: false,
-      error: "Headshot upload is not configured.",
-      filename: file.name,
+  const uploadDir = getModeckUserMediaDir();
+  const filename = getSafeUploadedFilename(file.name);
+  const targetPath = path.join(uploadDir, filename);
+
+  await mkdir(uploadDir, { recursive: true });
+  await writeFile(targetPath, Buffer.from(await file.arrayBuffer()));
+
+  if (process.env.NODE_ENV !== "production") {
+    console.info("[modeck-media-upload]", {
+      filename,
+      originalFilename: file.name,
       sizeBytes: file.size,
       contentType: file.type,
-      blocker: "No live MoDeck media upload endpoint or upload contract exists in this repo.",
-    },
-    { status: 501 },
+      uploadDir,
+    });
+  }
+
+  return Response.json({
+    ok: true,
+    filename,
+    sizeBytes: file.size,
+    contentType: file.type,
+  });
+}
+
+function getModeckUserMediaDir() {
+  return (
+    process.env.MODECK_USER_MEDIA_DIR ??
+    path.join(homedir(), "MoDeck Sync", "_modk-data", "User media")
   );
+}
+
+function getSafeUploadedFilename(filename: string) {
+  const parsed = path.parse(filename);
+  const base = parsed.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 60) || "headshot";
+  const ext = parsed.ext.toLowerCase().replace(/[^a-z0-9.]/g, "") || ".png";
+
+  return `media-lab-${randomUUID()}-${base}${ext}`;
 }

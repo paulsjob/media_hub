@@ -79,8 +79,8 @@ Ratio-specific child MOGRT names:
 | Ratio | MOGRT |
 | --- | --- |
 | `16:9` | `MD_Quote_Card_16x9` |
-| `1:1` | `QuoteCard_1x1` |
-| `4:5` | `QuoteCard_4x5` |
+| `1:1` | `MD_Quote_Card_1x1` |
+| `4:5` | `MD_Quote_Card_4x5` |
 | `9:16` | `MD_Quote_Card_9x16` |
 
 ## E. How Ratios Are Handled

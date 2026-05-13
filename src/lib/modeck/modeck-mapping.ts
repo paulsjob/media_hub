@@ -54,7 +54,7 @@ export const QUOTE_CARD_MODECK_MAPPING: ModeckTemplateMapping = {
   mogrtMappings: [
     { ratio: "16:9", mogrtName: "MD_Quote_Card_16x9" },
     { ratio: "1:1", mogrtName: "MD_Quote_Card_1x1" },
-    { ratio: "4:5", mogrtName: "QuoteCard_4x5" },
+    { ratio: "4:5", mogrtName: "MD_Quote_Card_4x5" },
     { ratio: "9:16", mogrtName: "MD_Quote_Card_9x16" },
   ],
   outputFormatIds: MVP_OUTPUT_FORMATS.map((output) => output.id),

@@ -10,7 +10,7 @@ Current active product scope: Media Lab Lite. The Lite workflow is `/generate` -
 | `/create` | Alias for the home create-package page. | Product-facing MVP | Operators | Re-exports `HomePage` from `/`; keep route stable unless a real create flow replaces it. |
 | `/intake` | Mock story intake form showing story basics, sources, receipts, messaging, and recommended formats. | Product-facing MVP | Operators, editorial | Uses `AppShell`, `PageHeader`, `SectionCard`, form UI primitives, and `mediaLab.getFeaturedStory()`. |
 | `/templates` | Template library and template detail view. | Product-facing MVP | Operators | Uses `AppShell`, `TemplateListItem`, `SectionCard`, and template mock data. Search/filter controls are presentational. |
-| `/generate` | Quote Card generation workflow: edit fields, select outputs, preview selected ratios, and start package generation. | Product-facing MVP | Operators | Uses `MvpShell` and `PackageGenerator`. Connects to live MoDeck preview for supported 16:9 preview behavior and starts live final render for connected still outputs. |
+| `/generate` | Quote Card generation workflow: edit fields, select outputs, preview selected ratios, and start package generation. | Product-facing MVP | Operators | Uses `MvpShell` and `PackageGenerator`. Connects to live MoDeck preview for supported still outputs and starts live final render for connected still outputs. |
 | `/package` | Package results screen showing still/video download rows from selected outputs and render query state. | Product-facing MVP | Operators | Uses `MvpShell` and `PackageResults`. Polls MoDeck render status for live render outputs. |
 | `/approvals` | Approval queue mock with one featured package and review detail. | Product-facing MVP | Approvers, operators | Uses `AppShell`, `AssetPreview`, `StatusBadge`, and `mediaLab.getFeaturedAssetPackageView()`. |
 | `/distribution` | Distribution planning stub for selected platforms and scheduled export. | Placeholder | Operators, distribution | Uses `AppShell`, `AssetPreview`, platform mock data, and links back to library asset detail. No publishing integration. |
@@ -22,7 +22,7 @@ Current active product scope: Media Lab Lite. The Lite workflow is `/generate` -
 | `/dev/quote-card-calibration` | Internal Quote Card visual calibration harness. | Internal/dev-only | Developers, designers | Uses `QuoteCardCalibration`; useful before changing production preview layout. |
 | `/api/modeck/preview` | Server route that calls MoDeck `/preview` and returns normalized preview status, duration, image base64, request summary, and response summary. | Internal/API | App, dev harness | Used by `/dev/modeck-preview-test` and `PreviewGrid`. Preserve working option names, including `QUOTE_POSITION_y`. |
 | `/api/modeck/preview/download` | Server route that calls MoDeck preview and converts the returned still image to a PNG attachment. | Internal/API | App | Used as the live preview download source for supported still outputs. |
-| `/api/modeck/render` | Server route that starts a live MoDeck final render for `still-1920x1080`. | Internal/API | App | Called by `PackageGenerator`; other outputs still use mock placeholders or preview-derived downloads. |
+| `/api/modeck/render` | Server route that starts a live MoDeck final render for connected Quote Card still outputs. | Internal/API | App | Called by `PackageGenerator`; unsupported outputs still use mock placeholders. |
 | `/api/modeck/render/status` | Server route that polls MoDeck `/renderstatus`, normalizes progress/status, and registers download tokens when complete. | Internal/API | App | Called by `PackageResults` while live render jobs are pending. |
 | `/api/modeck/render/download` | Server route that downloads registered MoDeck render media and returns a PNG still or MP4 attachment. | Internal/API | App | Uses `sharp` and `ffmpeg` frame extraction for still outputs when upstream media is video. |
 | `/api/mock-modeck/download` | Mock download endpoint for placeholder stills and videos. | Internal/API placeholder | App | Returns SVG stills or text files for outputs without live final render support. |
@@ -35,7 +35,7 @@ Current active product scope: Media Lab Lite. The Lite workflow is `/generate` -
 
 `/api/modeck/preview/download` is a convenience download route for preview-backed stills. It calls MoDeck `/preview`, extracts the image, converts it to PNG with `sharp`, and returns it as an attachment.
 
-`/api/modeck/render` starts a live final render for connected still outputs, currently `still-1920x1080` and `still-1080x1920`. It maps Quote Card fields to MoDeck options, calls MoDeck `/render`, and returns the edit ID and initial normalized status.
+`/api/modeck/render` starts a live final render for connected still outputs, currently `still-1920x1080`, `still-1080x1080`, `still-1080x1350`, and `still-1080x1920`. It maps Quote Card fields to MoDeck options, calls MoDeck `/render`, and returns the edit ID and initial normalized status.
 
 `/api/modeck/render/status` polls MoDeck `/renderstatus` for an edit ID. It normalizes statuses into queued, rendering, completed, failed, or canceled; derives progress; and registers an internal download URL when MoDeck exposes a temporary media URL.
 

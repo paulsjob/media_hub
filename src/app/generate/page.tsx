@@ -27,7 +27,7 @@ export default async function GeneratePage({
   const liteOutputs = mediaLab
     .getOutputFormats()
     .filter((output) =>
-      ["still-1920x1080", "still-1080x1080", "still-1080x1920"].includes(output.id),
+      ["still-1920x1080", "still-1080x1080", "still-1080x1350", "still-1080x1920"].includes(output.id),
     );
 
   return (

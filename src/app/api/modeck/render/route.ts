@@ -42,6 +42,13 @@ const liveRenderOutputs: Record<string, LiveRenderOutputConfig> = {
       quotePositionY: 225,
     },
   },
+  "still-1080x1350": {
+    size: "1080x1350",
+    deck: MODECK_QUOTE_BOX_TEST_DECK,
+    mogrt: "MD_Quote_Card_4x5",
+    renderLabel: "Still 1080x1350",
+    filenameSize: "1080x1350",
+  },
   "still-1080x1920": {
     size: "1080x1920",
     deck: MODECK_QUOTE_BOX_TEST_DECK,
@@ -83,6 +90,7 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as Partial<ModeckRenderRequestBody>;
+  const startedAt = Date.now();
   const outputId = body.outputId ?? "";
   const outputConfig = liveRenderOutputs[outputId as keyof typeof liveRenderOutputs];
 
@@ -115,11 +123,21 @@ export async function POST(request: Request) {
     mogrtSeq: [
       {
         name: outputConfig.mogrt,
-        options: renderOptions,
+        options: renderOptions.map(toModeckRenderOption),
         duration: 1,
       },
     ],
     globalOptions: [],
+    media: fields.headshotFilename
+      ? [
+          {
+            fieldId: "headshot",
+            optionName: "HEADSHOT",
+            mediaLabReference: fields.headshotFilename,
+            uploadedFilename: fields.headshotFilename,
+          },
+        ]
+      : undefined,
   };
 
   logOutgoingModeckOptions({
@@ -127,6 +145,15 @@ export async function POST(request: Request) {
     outputId,
     mogrtName: outputConfig.mogrt,
     options: renderOptions,
+    headshotValue: fields.headshotFilename,
+  });
+  logModeckRenderTiming({
+    outputId,
+    mogrtName: outputConfig.mogrt,
+    durationMs: 0,
+    responseOk: true,
+    hasEditId: false,
+    stage: "server-render-create-start",
   });
 
   const response = await fetch(`${config.apiBaseUrl}/render`, {
@@ -138,8 +165,18 @@ export async function POST(request: Request) {
     body: JSON.stringify(renderPayload),
   });
   const responseText = await response.text();
+  const durationMs = Date.now() - startedAt;
   const responseJson = parseJsonObject(responseText);
   const editId = extractEditId(responseJson);
+
+  logModeckRenderTiming({
+    outputId,
+    mogrtName: outputConfig.mogrt,
+    durationMs,
+    responseOk: response.ok,
+    hasEditId: Boolean(editId),
+    stage: "server-render-create-end",
+  });
 
   if (!response.ok || !editId) {
     return Response.json(
@@ -164,16 +201,51 @@ export async function POST(request: Request) {
   });
 }
 
+function toModeckRenderOption({ name, value }: { name: string; value: string | number }) {
+  return name === "HEADSHOT" ? { name, value, type: "media_replacement" } : { name, value };
+}
+
+function logModeckRenderTiming({
+  outputId,
+  mogrtName,
+  durationMs,
+  responseOk,
+  hasEditId,
+  stage,
+}: {
+  outputId: string;
+  mogrtName: string;
+  durationMs: number;
+  responseOk: boolean;
+  hasEditId: boolean;
+  stage: string;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-render-create-timing]", {
+    stage,
+    outputId,
+    mogrtName,
+    durationMs,
+    responseOk,
+    hasEditId,
+  });
+}
+
 function logOutgoingModeckOptions({
   route,
   outputId,
   mogrtName,
   options,
+  headshotValue,
 }: {
   route: "preview" | "render";
   outputId: string;
   mogrtName: string;
   options: Array<{ name: string; value: string | number }>;
+  headshotValue?: string;
 }) {
   if (process.env.NODE_ENV === "production") {
     return;
@@ -187,6 +259,7 @@ function logOutgoingModeckOptions({
     mogrtName,
     brandValue: brand,
     brandType: typeof brand,
+    headshotValue: headshotValue || options.find((option) => option.name === "HEADSHOT")?.value || null,
     optionKeys: options.map((option) => option.name),
   });
 }

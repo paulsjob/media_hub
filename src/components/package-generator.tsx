@@ -7,7 +7,6 @@ import { PreviewGrid } from "@/components/preview-grid";
 import {
   ButtonLike,
   SectionCard,
-  StatusPill,
 } from "@/components/ui";
 import { mediaLabPayloadToModeckRenderRequest } from "@/lib/modeck/modeck-mapping";
 import { mockModeckAdapter } from "@/lib/modeck/mock-modeck-adapter";
@@ -32,7 +31,19 @@ interface RenderStartResult {
   error?: string;
 }
 
-const liveRenderOutputIds = new Set(["still-1920x1080", "still-1080x1080", "still-1080x1920"]);
+interface GenerationProgress {
+  total: number;
+  completed: number;
+  currentLabel: string;
+}
+
+const liveRenderOutputIds = new Set([
+  "still-1920x1080",
+  "still-1080x1080",
+  "still-1080x1350",
+  "still-1080x1920",
+]);
+const brandOptions = [{ value: "2", label: "Default brand" }];
 
 export function PackageGenerator({
   template,
@@ -51,7 +62,7 @@ export function PackageGenerator({
   const defaultSelectedIds =
     initialSelectedIds && initialSelectedIds.length > 0
       ? initialSelectedIds
-      : ["still-1920x1080", "still-1080x1080", "still-1080x1920"];
+      : ["still-1920x1080", "still-1080x1080", "still-1080x1350", "still-1080x1920"];
   const [selectedIds, setSelectedIds] = useState<string[]>(defaultSelectedIds);
   const [activeOutputId, setActiveOutputId] = useState(defaultSelectedIds[0] ?? "");
   const [content, setContent] = useState<PreviewContent>(() => ({
@@ -68,11 +79,13 @@ export function PackageGenerator({
     allConnectedPreviewsReady: false,
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null);
   const [selectedHeadshot, setSelectedHeadshot] = useState<{
     filename: string;
     previewUrl: string;
   } | null>(null);
   const [headshotError, setHeadshotError] = useState("");
+  const [isUploadingHeadshot, setIsUploadingHeadshot] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
   const generatePackageInFlightRef = useRef(false);
   const previewContent = useMemo(
@@ -179,29 +192,71 @@ export function PackageGenerator({
     setContent((current) => ({ ...current, [key]: value }));
   }
 
-  function selectHeadshotFile(file: File | null) {
+  async function selectHeadshotFile(file: File | null) {
     invalidatePreviewApproval("headshot_file_changed");
     setHeadshotError("");
 
-    setSelectedHeadshot((current) => {
-      if (current?.previewUrl) {
-        URL.revokeObjectURL(current.previewUrl);
-      }
+    if (selectedHeadshot?.previewUrl) {
+      URL.revokeObjectURL(selectedHeadshot.previewUrl);
+    }
 
-      if (!file) {
-        return null;
-      }
+    if (!file) {
+      setSelectedHeadshot(null);
+      setContent((current) => ({ ...current, headshot: "" }));
+      return;
+    }
 
-      if (!file.type.startsWith("image/")) {
-        setHeadshotError("Choose an image file.");
-        return null;
-      }
+    if (!file.type.startsWith("image/")) {
+      setSelectedHeadshot(null);
+      setHeadshotError("Choose an image file.");
+      return;
+    }
 
-      return {
-        filename: file.name,
-        previewUrl: URL.createObjectURL(file),
-      };
+    logHeadshotSelection(file.name);
+
+    const previewUrl = URL.createObjectURL(file);
+    setSelectedHeadshot({
+      filename: file.name,
+      previewUrl,
     });
+    setIsUploadingHeadshot(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/modeck/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await response.json()) as {
+        ok: boolean;
+        filename?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !data.ok || !data.filename) {
+        throw new Error(data.error ?? "Headshot upload failed.");
+      }
+
+      logHeadshotUploadResult({
+        selectedFilename: file.name,
+        uploadedFilename: data.filename,
+      });
+      setContent((current) => ({ ...current, headshot: data.filename ?? "" }));
+      setSelectedHeadshot((current) =>
+        current
+          ? {
+              ...current,
+              filename: data.filename ?? current.filename,
+            }
+          : current,
+      );
+    } catch (error) {
+      setHeadshotError(error instanceof Error ? error.message : "Headshot upload failed.");
+    } finally {
+      setIsUploadingHeadshot(false);
+    }
   }
 
   function clearHeadshotFile() {
@@ -216,6 +271,8 @@ export function PackageGenerator({
 
     generatePackageInFlightRef.current = true;
     setIsGenerating(true);
+    setGenerationProgress(null);
+    const generateStartedAt = performance.now();
     const headshotReference = getModeckHeadshotFilename(content.headshot);
 
     const renderRequests = mediaLabPayloadToModeckRenderRequest({
@@ -239,11 +296,50 @@ export function PackageGenerator({
       renderRequests.map((request) => mockModeckAdapter.requestRender(request)),
     );
     const liveRenderOutputIdsToStart = selectedIds.filter((outputId) => liveRenderOutputIds.has(outputId));
+    const liveRenderOutputsToStart = liveRenderOutputIdsToStart
+      .map((outputId) => outputs.find((output) => output.id === outputId))
+      .filter((output): output is MvpOutputFormat => Boolean(output));
 
     logModeckRenderCreationPlan(liveRenderOutputIdsToStart);
+    logGenerateStage({
+      stage: "client-click-to-render-start",
+      durationMs: Math.round(performance.now() - generateStartedAt),
+      outputIds: liveRenderOutputIdsToStart,
+    });
+    setGenerationProgress({
+      total: liveRenderOutputsToStart.length,
+      completed: 0,
+      currentLabel: getUserFacingOutputLabel(liveRenderOutputsToStart[0] ?? outputs[0]),
+    });
 
+    const liveRenderStartedAt = performance.now();
     const liveRenderResults = await Promise.all(
-      liveRenderOutputIdsToStart.map((outputId) => startLiveModeckRender(outputId, content)),
+      liveRenderOutputsToStart.map((output, index) =>
+        startLiveModeckRender(output.id, content).finally(() => {
+          setGenerationProgress((current) => ({
+            total: current?.total ?? liveRenderOutputsToStart.length,
+            completed: Math.min((current?.completed ?? index) + 1, liveRenderOutputsToStart.length),
+            currentLabel:
+              liveRenderOutputsToStart[Math.min(index + 1, liveRenderOutputsToStart.length - 1)]
+                ? getUserFacingOutputLabel(liveRenderOutputsToStart[Math.min(index + 1, liveRenderOutputsToStart.length - 1)])
+                : getUserFacingOutputLabel(output),
+          }));
+        }),
+      ),
+    );
+
+    logModeckRenderCreationTotal({
+      outputIds: liveRenderOutputIdsToStart,
+      durationMs: Math.round(performance.now() - liveRenderStartedAt),
+    });
+    setGenerationProgress((current) =>
+      current
+        ? {
+            ...current,
+            completed: current.total,
+            currentLabel: "Preparing downloads",
+          }
+        : current,
     );
     const liveRenderByOutputId = new Map(
       liveRenderResults
@@ -288,6 +384,12 @@ export function PackageGenerator({
       renders: encodeURIComponent(JSON.stringify(renderedOutputs)),
     });
 
+    logGenerateStage({
+      stage: "client-generate-total-before-route",
+      durationMs: Math.round(performance.now() - generateStartedAt),
+      outputIds: liveRenderOutputIdsToStart,
+    });
+
     router.push(`/package?${params.toString()}`);
   }
 
@@ -296,7 +398,11 @@ export function PackageGenerator({
       <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] xl:items-start">
         <div className="space-y-4">
           <SectionCard title="Template Selection">
-            <TemplateSummary />
+            <TemplateSummary
+              outputs={outputs}
+              selectedIds={selectedIds}
+              onToggle={toggleOutput}
+            />
           </SectionCard>
 
           <SectionCard title="Content Fields" action={<Icon name="sliders" className="h-5 w-5 text-slate-500" />}>
@@ -311,6 +417,7 @@ export function PackageGenerator({
                       onChange={(value) => updateContent(key, value)}
                       selectedFilename={selectedHeadshot?.filename}
                       previewUrl={selectedHeadshot?.previewUrl}
+                      isUploading={isUploadingHeadshot}
                       errorMessage={headshotError}
                       fileInputKey={fileInputKey}
                       onFileChange={selectHeadshotFile}
@@ -332,15 +439,6 @@ export function PackageGenerator({
               <BrandControl value={content.brand} onChange={(value) => updateContent("brand", value)} />
             </div>
           </SectionCard>
-
-          <SectionCard title="Output Sizes" className="p-4">
-            <OutputSelector
-              outputs={outputs}
-              selectedIds={selectedIds}
-              activeOutputId={activeOutputId}
-              onToggle={toggleOutput}
-            />
-          </SectionCard>
         </div>
 
         <div className="space-y-4">
@@ -356,64 +454,31 @@ export function PackageGenerator({
             />
           </SectionCard>
 
-          <div className="border border-[var(--navy-blue)] bg-[var(--powder-blue)] p-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold text-[var(--navy-blue)]">Approve this preview to package the bundle.</p>
-              </div>
-              {!previewReadiness.allConnectedPreviewsReady ? (
-                <span className="inline-flex min-h-10 items-center justify-center border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-500">
-                  Rendering previews
-                </span>
-              ) : previewApprovedEffective ? (
-                <span className="inline-flex min-h-10 items-center justify-center border border-[var(--navy-blue)] bg-white px-4">
-                  <StatusPill label="Preview approved" />
-                </span>
-              ) : (
-                <ButtonLike
-                  variant="primary"
-                  onClick={() => {
-                    setApprovedPreviewSignature(previewReadiness.currentPreviewSignature);
-                  }}
-                  className="shrink-0 gap-2"
-                >
-                  <Icon name="check" />
-                  Approve Preview
-                </ButtonLike>
-              )}
-            </div>
-          </div>
+          <PreviewActionPanel
+            allConnectedPreviewsReady={previewReadiness.allConnectedPreviewsReady}
+            previewApprovedEffective={previewApprovedEffective}
+            selectedOutputCount={selectedIds.length}
+            isGenerating={isGenerating}
+            progress={generationProgress}
+            onApprove={() => setApprovedPreviewSignature(previewReadiness.currentPreviewSignature)}
+            onEdit={() => setApprovedPreviewSignature("")}
+            onGenerate={generatePackage}
+          />
         </div>
       </div>
-
-      {previewApprovedEffective ? (
-        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
-          <ButtonLike
-            variant="secondary"
-            onClick={() => {
-              setApprovedPreviewSignature("");
-            }}
-            className="gap-2"
-          >
-            <Icon name="sliders" />
-            Edit Fields
-          </ButtonLike>
-          <ButtonLike
-            variant="primary"
-            onClick={generatePackage}
-            disabled={selectedIds.length === 0 || isGenerating || !previewApprovedEffective}
-            className="gap-2"
-          >
-            <Icon name="package" />
-            {isGenerating ? "Generating Graphics..." : "Generate Graphics"}
-          </ButtonLike>
-        </div>
-      ) : null}
     </div>
   );
 }
 
-function TemplateSummary() {
+function TemplateSummary({
+  outputs,
+  selectedIds,
+  onToggle,
+}: {
+  outputs: MvpOutputFormat[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+}) {
   return (
     <div className="grid gap-4">
       <div className="flex items-start gap-3">
@@ -427,18 +492,86 @@ function TemplateSummary() {
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {["16:9 Landscape", "1:1 Square", "9:16 Vertical"].map((size) => (
-          <span key={size} className="chip bg-[var(--light-gray)] text-[var(--navy-blue)]">
-            {size}
-          </span>
-        ))}
+      <OutputSelector
+        outputs={outputs}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+      />
+    </div>
+  );
+}
+
+function PreviewActionPanel({
+  allConnectedPreviewsReady,
+  previewApprovedEffective,
+  selectedOutputCount,
+  isGenerating,
+  progress,
+  onApprove,
+  onEdit,
+  onGenerate,
+}: {
+  allConnectedPreviewsReady: boolean;
+  previewApprovedEffective: boolean;
+  selectedOutputCount: number;
+  isGenerating: boolean;
+  progress: GenerationProgress | null;
+  onApprove: () => void;
+  onEdit: () => void;
+  onGenerate: () => void;
+}) {
+  const progressStep = progress && progress.total > 0
+    ? Math.min(progress.completed + 1, progress.total)
+    : 0;
+  const primaryDisabled = previewApprovedEffective
+    ? selectedOutputCount === 0 || isGenerating
+    : !allConnectedPreviewsReady;
+
+  return (
+    <div className="border border-slate-200 bg-white px-3 py-2 shadow-sm">
+      {isGenerating ? (
+        <div className="mb-2 text-xs text-slate-600">
+          <p className="font-semibold">
+            {progressStep > 0 && progress
+              ? `Generating ${progressStep} of ${progress.total}: ${progress.currentLabel}`
+              : "Generating final PNGs"}
+          </p>
+        </div>
+      ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[var(--navy-blue)]">
+            {previewApprovedEffective ? "Approved." : allConnectedPreviewsReady ? "Preview ready." : "Rendering previews."}
+          </p>
+          {!previewApprovedEffective ? (
+            <p className="mt-0.5 text-xs text-slate-500">Approve before generating final files.</p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {previewApprovedEffective ? (
+            <ButtonLike variant="secondary" onClick={onEdit} className="min-h-9 px-3 text-sm">
+              Edit
+            </ButtonLike>
+          ) : null}
+          <ButtonLike
+            variant="primary"
+            onClick={previewApprovedEffective ? onGenerate : onApprove}
+            disabled={primaryDisabled}
+            className="min-h-9 px-4 text-sm"
+          >
+            {previewApprovedEffective
+              ? isGenerating ? "Generating..." : "Generate"
+              : allConnectedPreviewsReady ? "Approve" : "Rendering"}
+          </ButtonLike>
+        </div>
       </div>
     </div>
   );
 }
 
 async function startLiveModeckRender(outputId: string, content: PreviewContent): Promise<RenderStartResult> {
+  const startedAt = performance.now();
+
   try {
     logModeckRenderCreateRequest(outputId);
 
@@ -457,13 +590,25 @@ async function startLiveModeckRender(outputId: string, content: PreviewContent):
       }),
     });
     const data = (await response.json()) as RenderStartResult;
+    const durationMs = Math.round(performance.now() - startedAt);
 
-    logModeckRenderCreateResponse(outputId, data, response.ok);
+    logModeckRenderCreateResponse(outputId, data, response.ok, durationMs);
 
     return response.ok
       ? { ...data, outputId: data.outputId ?? outputId }
       : { ...data, ok: false, outputId: data.outputId ?? outputId };
   } catch (error) {
+    logModeckRenderCreateResponse(
+      outputId,
+      {
+        ok: false,
+        outputId,
+        error: error instanceof Error ? error.message : "Render request failed.",
+      },
+      false,
+      Math.round(performance.now() - startedAt),
+    );
+
     return {
       ok: false,
       outputId,
@@ -493,7 +638,50 @@ function logModeckRenderCreateRequest(outputId: string) {
   });
 }
 
-function logModeckRenderCreateResponse(outputId: string, result: RenderStartResult, responseOk: boolean) {
+function logModeckRenderCreationTotal({
+  outputIds,
+  durationMs,
+}: {
+  outputIds: string[];
+  durationMs: number;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-render-create-total]", {
+    outputIds,
+    renderJobCount: outputIds.length,
+    durationMs,
+  });
+}
+
+function logGenerateStage({
+  stage,
+  durationMs,
+  outputIds,
+}: {
+  stage: string;
+  durationMs: number;
+  outputIds: string[];
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-generate-client-timing]", {
+    stage,
+    durationMs,
+    outputIds,
+  });
+}
+
+function logModeckRenderCreateResponse(
+  outputId: string,
+  result: RenderStartResult,
+  responseOk: boolean,
+  durationMs: number,
+) {
   if (process.env.NODE_ENV === "production") {
     return;
   }
@@ -505,6 +693,34 @@ function logModeckRenderCreateResponse(outputId: string, result: RenderStartResu
     responseOk,
     ok: result.ok,
     error: result.error ?? null,
+    durationMs,
+  });
+}
+
+function logHeadshotSelection(filename: string) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-headshot-selected]", {
+    selectedFilename: filename,
+  });
+}
+
+function logHeadshotUploadResult({
+  selectedFilename,
+  uploadedFilename,
+}: {
+  selectedFilename: string;
+  uploadedFilename: string;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-headshot-uploaded]", {
+    selectedFilename,
+    uploadedFilename,
   });
 }
 
@@ -544,19 +760,16 @@ function GeneratorField({
 function OutputSelector({
   outputs,
   selectedIds,
-  activeOutputId,
   onToggle,
 }: {
   outputs: MvpOutputFormat[];
   selectedIds: string[];
-  activeOutputId: string;
   onToggle: (id: string) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
+    <div className="flex flex-wrap gap-2">
       {outputs.map((output) => {
         const selected = selectedIds.includes(output.id);
-        const active = activeOutputId === output.id;
 
         return (
           <button
@@ -565,14 +778,14 @@ function OutputSelector({
             onClick={() => onToggle(output.id)}
             aria-pressed={selected}
             title={getOutputTitle(output)}
-            className={`flex min-h-14 items-center gap-3 rounded-md border px-3 text-left text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--flame)] ${
+            className={`relative inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-full border px-3.5 text-sm font-semibold leading-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--flame)] ${
               selected
-                ? `border-[var(--flame)] bg-white text-[var(--navy-blue)] ${active ? "ring-2 ring-orange-200" : ""}`
-                : "border-slate-300 bg-white text-slate-600 hover:border-[var(--flame)] hover:bg-slate-50"
+                ? "border-[var(--flame)] bg-[var(--navy-blue)] text-white shadow-sm ring-1 ring-orange-200"
+                : "border-slate-300 bg-white text-[var(--navy-blue)] shadow-none hover:border-slate-400 hover:bg-slate-50"
             }`}
           >
-            <RatioGlyph ratio={output.aspectLabel} active={active} selected={selected} />
-            <span>{getOutputDisplayLabel(output)}</span>
+            {selected ? <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-[var(--flame)]" /> : null}
+            {getOutputDisplayLabel(output)}
           </button>
         );
       })}
@@ -585,6 +798,7 @@ function HeadshotField({
   onChange,
   selectedFilename,
   previewUrl,
+  isUploading,
   errorMessage,
   fileInputKey,
   onFileChange,
@@ -594,9 +808,10 @@ function HeadshotField({
   onChange: (value: string) => void;
   selectedFilename?: string;
   previewUrl?: string;
+  isUploading: boolean;
   errorMessage: string;
   fileInputKey: number;
-  onFileChange: (file: File | null) => void;
+  onFileChange: (file: File | null) => void | Promise<void>;
   onClearFile: () => void;
 }) {
   return (
@@ -613,6 +828,7 @@ function HeadshotField({
       <p className="text-xs text-slate-500">
         Use a public image URL or a file in MoDeck Sync/_modk-data/User media.
       </p>
+      {isUploading ? <p className="text-sm font-semibold text-slate-600">Attaching headshot...</p> : null}
       {errorMessage ? <p className="text-sm font-semibold text-orange-800">{errorMessage}</p> : null}
 
       <details className="group rounded-md border border-slate-200 bg-white p-3 [&>summary::-webkit-details-marker]:hidden">
@@ -656,36 +872,6 @@ function HeadshotField({
   );
 }
 
-function RatioGlyph({
-  ratio,
-  active,
-  selected,
-}: {
-  ratio: string;
-  active: boolean;
-  selected: boolean;
-}) {
-  const shapeClass = {
-    "16:9": "h-3 w-5",
-    "1:1": "h-4 w-4",
-    "4:5": "h-5 w-4",
-    "9:16": "h-5 w-3",
-  }[ratio] ?? "h-4 w-4";
-
-  return (
-    <span
-      className={`inline-block rounded-sm border ${
-        active
-          ? "border-current bg-white/35"
-          : selected
-            ? "border-current bg-white/35"
-            : "border-slate-400 bg-slate-100"
-      } ${shapeClass}`}
-      aria-hidden="true"
-    />
-  );
-}
-
 function BrandControl({
   value,
   onChange,
@@ -703,7 +889,11 @@ function BrandControl({
         value={value ?? "2"}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value="2">Default brand</option>
+        {brandOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </select>
     </label>
   );
@@ -714,15 +904,32 @@ function getModeckHeadshotFilename(value: string) {
 }
 
 function getOutputTitle(output: MvpOutputFormat) {
+  if (output.id === "still-1080x1350") {
+    return "1400x1800 - 4:5 - Instagram Feed, Facebook";
+  }
+
   return `${output.width}x${output.height} - ${output.aspectLabel} - ${output.recommendedPlatforms
     .slice(0, 2)
     .join(", ")}`;
+}
+
+function getUserFacingOutputLabel(output: MvpOutputFormat | undefined) {
+  if (!output) {
+    return "final PNG";
+  }
+
+  if (output.id === "still-1080x1350") {
+    return "1400x1800 \u00b7 4:5 \u00b7 Still";
+  }
+
+  return `${output.label} \u00b7 ${output.aspectLabel} \u00b7 ${output.type === "video" ? "Video" : "Still"}`;
 }
 
 function getOutputDisplayLabel(output: MvpOutputFormat) {
   const labelByRatio: Record<string, string> = {
     "16:9": "16:9 Landscape",
     "1:1": "1:1 Square",
+    "4:5": "4:5 Portrait",
     "9:16": "9:16 Vertical",
   };
 

@@ -28,7 +28,18 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, error: "Unknown output format." }, { status: 400 });
   }
 
+  const downloadStartedAt = Date.now();
+  logRenderDownloadTiming({
+    stage: "server-download-fetch-start",
+    outputId: output.id,
+    durationMs: 0,
+  });
   const upstream = await fetch(record.mediaUrl, { cache: "no-store" });
+  logRenderDownloadTiming({
+    stage: "server-download-fetch-end",
+    outputId: output.id,
+    durationMs: Date.now() - downloadStartedAt,
+  });
 
   if (!upstream.ok) {
     return Response.json(
@@ -41,10 +52,16 @@ export async function GET(request: Request) {
   const media = Buffer.from(await upstream.arrayBuffer());
 
   if (output.type === "still") {
-    const image =
+    const sourceImage =
       isVideoMedia(contentType, record.mediaUrl) || !isImageMedia(contentType)
         ? await extractPngFrame(media)
         : await sharp(media).png().toBuffer();
+    const image = await normalizeStillPngDimensions({
+      image: sourceImage,
+      outputId: output.id,
+      requestedWidth: output.width,
+      requestedHeight: output.height,
+    });
 
     return createAttachmentResponse({
       body: image,
@@ -57,6 +74,88 @@ export async function GET(request: Request) {
     body: media,
     contentType: contentType || "video/mp4",
     filename: `${record.filenameBase}.mp4`,
+  });
+}
+
+async function normalizeStillPngDimensions({
+  image,
+  outputId,
+  requestedWidth,
+  requestedHeight,
+}: {
+  image: Buffer;
+  outputId: string;
+  requestedWidth: number;
+  requestedHeight: number;
+}) {
+  const resizeStartedAt = Date.now();
+  const metadata = await sharp(image).metadata();
+  const actualWidth = metadata.width ?? 0;
+  const actualHeight = metadata.height ?? 0;
+  const shouldResize = actualWidth !== requestedWidth || actualHeight !== requestedHeight;
+
+  if (process.env.NODE_ENV !== "production") {
+    console.info("[modeck-render-download-dimensions]", {
+      outputId,
+      requestedWidth,
+      requestedHeight,
+      actualWidth,
+      actualHeight,
+      resized: shouldResize,
+    });
+  }
+
+  if (!shouldResize) {
+    logRenderDownloadTiming({
+      stage: "server-resize-skip",
+      outputId,
+      durationMs: Date.now() - resizeStartedAt,
+    });
+    return image;
+  }
+
+  const resized = await sharp(image)
+    .resize(requestedWidth, requestedHeight, { fit: "fill" })
+    .png()
+    .toBuffer();
+  const resizedMetadata = await sharp(resized).metadata();
+
+  if (process.env.NODE_ENV !== "production") {
+    console.info("[modeck-render-download-resized]", {
+      outputId,
+      requestedWidth,
+      requestedHeight,
+      finalWidth: resizedMetadata.width ?? 0,
+      finalHeight: resizedMetadata.height ?? 0,
+    });
+  }
+
+  logRenderDownloadTiming({
+    stage: "server-resize-end",
+    outputId,
+    durationMs: Date.now() - resizeStartedAt,
+  });
+
+  return resized;
+}
+
+function logRenderDownloadTiming({
+  stage,
+  outputId,
+  durationMs,
+}: {
+  stage: string;
+  outputId: string;
+  durationMs: number;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[modeck-render-download-timing]", {
+    stage,
+    outputId,
+    durationMs,
   });
 }
 

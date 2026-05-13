@@ -52,6 +52,11 @@ const previewOutputConfigs: Record<string, ModeckPreviewOutputConfig> = {
       quotePositionY: 225,
     },
   },
+  "4:5": {
+    mogrt: "MD_Quote_Card_4x5",
+    frame: 0,
+    previewFrame: 0,
+  },
   "9:16": {
     mogrt: "MD_Quote_Card_9x16",
     tuning: {
@@ -121,7 +126,7 @@ export async function POST(request: Request) {
     ...(typeof frame === "number" ? { frame } : {}),
     mogrt: {
       name: mogrtName,
-      options: options.map(({ name, value }) => ({ name, value })),
+      options: options.map(toModeckMogrtOption),
     },
     template: templateName,
     templateName,
@@ -157,6 +162,7 @@ export async function POST(request: Request) {
       hasPreviewFrame: Object.hasOwn(previewPayload, "previewFrame"),
       payloadKeys: Object.keys(previewPayload).filter((key) => key !== "apiKey"),
       options,
+      headshotValue: headshotFilename,
     });
 
     const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/preview`, {
@@ -229,6 +235,7 @@ function logOutgoingModeckOptions({
   hasPreviewFrame,
   payloadKeys,
   options,
+  headshotValue,
 }: {
   route: "preview" | "render";
   outputId: string;
@@ -239,6 +246,7 @@ function logOutgoingModeckOptions({
   hasPreviewFrame?: boolean;
   payloadKeys?: string[];
   options: Array<{ name: string; value: string | number }>;
+  headshotValue?: string;
 }) {
   if (process.env.NODE_ENV === "production") {
     return;
@@ -257,8 +265,13 @@ function logOutgoingModeckOptions({
     payloadKeys,
     brandValue: brand,
     brandType: typeof brand,
+    headshotValue: headshotValue || options.find((option) => option.name === "HEADSHOT")?.value || null,
     optionKeys: options.map((option) => option.name),
   });
+}
+
+function toModeckMogrtOption({ name, value, type }: ModeckPreviewOption) {
+  return name === "HEADSHOT" ? { name, value, type } : { name, value };
 }
 
 function logModeckPreviewResponse({
